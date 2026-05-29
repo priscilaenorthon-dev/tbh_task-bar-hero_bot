@@ -2,6 +2,10 @@
 
 Python helper that finds UI templates on screen and clicks them.
 
+## Support 
+
+https://saweria.co/goldiegaming | https://ko-fi.com/alandtiwa
+
 ## Requirements
 
 - Windows
