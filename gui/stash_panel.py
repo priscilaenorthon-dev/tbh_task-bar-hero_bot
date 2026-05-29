@@ -22,6 +22,22 @@ def stash_panel():
     _templates_tab(notebook)
     _control_tab(notebook)
 
+    footer = Frame(outer, pady=(8, 0))
+    footer.pack(fill="x", side="bottom")
+
+    gv.status_label = Label(
+        footer,
+        text=gv.status_message,
+        wraplength=460,
+        justify="left",
+        font=_LABEL_FONT,
+    )
+    gv.status_label.pack(fill="x", pady=(0, 6))
+
+    start_button = Button(footer, text="Start Stash", width=24)
+    start_button.configure(command=partial(start_stash, start_button))
+    start_button.pack(fill="x")
+
 
 def _scrollable_tab(notebook, title):
     tab = Frame(notebook)
@@ -234,28 +250,13 @@ def _control_tab(notebook):
         panel,
         row,
         "Console detail while the bot runs. DEBUG shows every template score; INFO is recommended. "
-        "Applied when you click Start Stash.",
+        "Applied when you click Start Stash (button below the tabs).",
     )
-
-    gv.status_label = Label(
-        panel,
-        text=gv.status_message,
-        wraplength=420,
-        justify="left",
-        font=_LABEL_FONT,
-    )
-    gv.status_label.grid(row=row, column=0, columnspan=2, sticky="w", pady=(16, 8))
-    row += 1
-
-    start_button = Button(panel, text="Start Stash", width=24)
-    start_button.configure(command=partial(start_stash, start_button))
-    start_button.grid(row=row, column=0, columnspan=2, pady=(4, 0))
-    row += 1
     row = _help(
         panel,
         row,
-        "Starts the main stash loop and the background stash/sort timer. Focus the game window after starting. "
-        "All settings above are read live; config is saved to resources/config.yml when you close the app.",
+        "All settings are read live while the bot runs. "
+        "Config is saved to resources/config.yml when you close the app.",
     )
 
 
