@@ -3,7 +3,7 @@ from tkinter import Button, Canvas, Entry, Frame, Label, Scrollbar, StringVar, t
 
 import utils.global_variables as gv
 from gui.gui_functions import open_set_region_drag, popup_rectangle_window, start_stash
-from utils.config import dict
+from utils.config import WINDOW_SCALES, dict
 
 _HELP_FONT = ("Segoe UI", 8)
 _SECTION_FONT = ("Segoe UI", 10, "bold")
@@ -114,6 +114,25 @@ def _screen_tab(notebook):
         "Set log level to DEBUG on the Run tab for drag coordinates. Preview: click once to close.",
     )
 
+    row = _section(panel, row, "Game window scale")
+    Label(panel, text="UI scale", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
+    scale_combo = ttk.Combobox(
+        panel,
+        textvariable=dict["window_scale"],
+        values=WINDOW_SCALES,
+        state="readonly",
+        width=8,
+    )
+    scale_combo.grid(row=row, column=1, sticky="w", padx=(8, 0))
+    row += 1
+    row = _help(
+        panel,
+        row,
+        "Match TBH in-game window scale. Templates load with suffix: "
+        "1 = no suffix (auto_fill.png), 1.25 = _1-25, 1.5 = _1-50, 2 = _2. "
+        "Filenames on the Templates tab are base names only.",
+    )
+
     row = _section(panel, row, "Template matching")
     row = _range_row(
         panel,
@@ -202,7 +221,8 @@ def _templates_tab(notebook):
     row = _help(
         panel,
         row,
-        "Filenames in the assets/ folder. Boss chest is checked first, then normal chest.",
+        "Base PNG filenames in assets/ (no scale suffix). The bot loads the scaled file "
+        "from Window scale on the Screen tab, e.g. auto_fill_1-25.png at scale 1.25.",
     )
     for entry in dict["chest_check"]:
         row = _template_row(panel, row, entry["name"], entry["template"])

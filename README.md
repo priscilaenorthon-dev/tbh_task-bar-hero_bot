@@ -19,7 +19,7 @@ python bot.py
 ## Usage
 
 1. Open the game and stand near your stash.
-2. In the GUI **Screen** tab, click **Draw search region** and left-drag over your stash UI (or use the number fields). Use **Preview region** to verify the green rectangle.
+2. In the GUI **Screen** tab, set **UI scale** to match TBH (1, 1.25, 1.5, or 2), then click **Draw search region** and left-drag over your stash UI.
 3. Adjust **Timing** and **Templates** tabs as needed (each field has a short explanation).
 4. On the **Run** tab, choose log level and click **Start Stash**, then focus the game window.
 
@@ -48,7 +48,7 @@ Wider ranges look more human but slow the bot slightly.
 
 ## Configuration
 
-All settings are edited in the GUI and saved to `resources/config.yml` when you close the app. Template filenames refer to PNGs in `assets/`.
+All settings are edited in the GUI and saved to `resources/config.yml` when you close the app. Template filenames are **base names** (e.g. `auto_fill.png`); scaled assets use suffixes `_1-25`, `_1-50`, or `_2` depending on window scale.
 
 ## Building an executable (optional)
 

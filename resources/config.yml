@@ -1,8 +1,8 @@
 search_region:
-  x: 0
-  y: 800
-  width: 1000
-  height: 650
+  x: 1
+  y: 824
+  width: 968
+  height: 612
 matching:
   threshold: 0.7
 timeouts:
@@ -46,3 +46,4 @@ steps:
 - name: close_stash
   template: assets/back_arrow.png
 log_lvl: INFO
+window_scale: '1'

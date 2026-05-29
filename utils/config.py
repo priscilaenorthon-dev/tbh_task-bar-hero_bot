@@ -6,6 +6,15 @@ from yaml import dump, safe_load
 
 from utils.global_variables import BASE_DIR, CONFIG_PATH
 
+WINDOW_SCALES = ("1", "1.25", "1.5", "2")
+_SCALE_SUFFIX = {
+    "1": "",
+    "1.25": "_1-25",
+    "1.5": "_1-50",
+    "2": "_2",
+}
+_SCALE_SUFFIXES = tuple(_SCALE_SUFFIX.values())
+
 
 def _template_path(relative_path: str) -> str:
     return str((BASE_DIR / relative_path).resolve())
@@ -68,7 +77,24 @@ def _normalize_config(config):
     offset_min, offset_max = _offset_range(config["randomization"].get("click_offset_px"))
     config["randomization"]["click_offset_px"] = {"min": offset_min, "max": offset_max}
 
+    scale = str(config.get("window_scale", "1"))
+    config["window_scale"] = scale if scale in _SCALE_SUFFIX else "1"
+
     return config
+
+
+def base_template_name(filename: str) -> str:
+    """Strip scale suffix so config stores e.g. auto_fill.png, not auto_fill_1-25.png."""
+    path = Path(filename)
+    stem = path.stem
+    for scale_suffix in _SCALE_SUFFIXES:
+        if scale_suffix and stem.endswith(scale_suffix):
+            return f"{stem[: -len(scale_suffix)]}{path.suffix}"
+    return path.name
+
+
+def _load_template_basename(relative_path: str) -> str:
+    return base_template_name(Path(relative_path).name)
 
 
 def _load_config():
@@ -103,8 +129,10 @@ dict = {
             "min": IntVar(value=config["combine_flow"]["wait_ms"]["min"]),
             "max": IntVar(value=config["combine_flow"]["wait_ms"]["max"]),
         },
-        "template": StringVar(value=Path(config["combine_flow"]["template"]).name),
-        "back_template": StringVar(value=Path(config["combine_flow"]["back_template"]).name),
+        "template": StringVar(value=_load_template_basename(config["combine_flow"]["template"])),
+        "back_template": StringVar(
+            value=_load_template_basename(config["combine_flow"]["back_template"])
+        ),
     },
     "periodic_stash_sort": {
         "interval_ms": {
@@ -116,10 +144,10 @@ dict = {
             "max": IntVar(value=config["periodic_stash_sort"]["between_clicks_ms"]["max"]),
         },
         "stash_template": StringVar(
-            value=Path(config["periodic_stash_sort"]["stash_template"]).name
+            value=_load_template_basename(config["periodic_stash_sort"]["stash_template"])
         ),
         "sort_template": StringVar(
-            value=Path(config["periodic_stash_sort"]["sort_template"]).name
+            value=_load_template_basename(config["periodic_stash_sort"]["sort_template"])
         ),
     },
     "randomization": {
@@ -131,7 +159,7 @@ dict = {
     "chest_check": [
         {
             "name": entry["name"],
-            "template": StringVar(value=Path(entry["template"]).name),
+            "template": StringVar(value=_load_template_basename(entry["template"])),
         }
         for entry in config["chest_check"]["templates"]
     ],
@@ -139,7 +167,7 @@ dict = {
         {
             "name": step["name"],
             **(
-                {"template": StringVar(value=Path(step["template"]).name)}
+                {"template": StringVar(value=_load_template_basename(step["template"]))}
                 if "template" in step
                 else {}
             ),
@@ -147,7 +175,17 @@ dict = {
         for step in config["steps"]
     ],
     "log_lvl": StringVar(value=config.get("log_lvl", "INFO")),
+    "window_scale": StringVar(value=config["window_scale"]),
 }
+
+
+def scaled_template_name(filename: str, scale: str | None = None) -> str:
+    """Apply window scale suffix: 1 → no suffix, 1.25 → _1-25, 1.5 → _1-50, 2 → _2."""
+    base = base_template_name(filename)
+    path = Path(base)
+    scale_key = scale if scale is not None else dict["window_scale"].get()
+    suffix = _SCALE_SUFFIX.get(str(scale_key), "")
+    return f"{path.stem}{suffix}{path.suffix}"
 
 
 def _resolved_template(filename: str) -> str:
@@ -156,7 +194,23 @@ def _resolved_template(filename: str) -> str:
 
 
 def template_path_for(variable) -> str:
-    return _resolved_template(variable.get())
+    from wrappers.logging_wrapper import debug, warning
+
+    base = base_template_name(variable.get())
+    scaled = scaled_template_name(base)
+    path = _resolved_template(scaled)
+    if Path(path).is_file():
+        debug(f"Template: {Path(path).name} (scale {dict['window_scale'].get()})")
+        return path
+    if scaled != base:
+        warning(
+            f"Scaled template missing: {scaled} (scale {dict['window_scale'].get()}), "
+            f"trying base {base}"
+        )
+        path = _resolved_template(base)
+    if not Path(path).is_file():
+        raise FileNotFoundError(f"Template not found: {scaled} or {base}")
+    return path
 
 
 def chest_check_entries():
@@ -202,8 +256,8 @@ def save_data():
                 "min": dict["combine_flow"]["wait_ms"]["min"].get(),
                 "max": dict["combine_flow"]["wait_ms"]["max"].get(),
             },
-            "template": f"assets/{dict['combine_flow']['template'].get()}",
-            "back_template": f"assets/{dict['combine_flow']['back_template'].get()}",
+            "template": f"assets/{base_template_name(dict['combine_flow']['template'].get())}",
+            "back_template": f"assets/{base_template_name(dict['combine_flow']['back_template'].get())}",
         },
         "periodic_stash_sort": {
             "interval_ms": {
@@ -214,8 +268,8 @@ def save_data():
                 "min": dict["periodic_stash_sort"]["between_clicks_ms"]["min"].get(),
                 "max": dict["periodic_stash_sort"]["between_clicks_ms"]["max"].get(),
             },
-            "stash_template": f"assets/{dict['periodic_stash_sort']['stash_template'].get()}",
-            "sort_template": f"assets/{dict['periodic_stash_sort']['sort_template'].get()}",
+            "stash_template": f"assets/{base_template_name(dict['periodic_stash_sort']['stash_template'].get())}",
+            "sort_template": f"assets/{base_template_name(dict['periodic_stash_sort']['sort_template'].get())}",
         },
         "randomization": {
             "click_offset_px": {
@@ -227,7 +281,7 @@ def save_data():
             "templates": [
                 {
                     "name": entry["name"],
-                    "template": f"assets/{entry['template'].get()}",
+                    "template": f"assets/{base_template_name(entry['template'].get())}",
                 }
                 for entry in dict["chest_check"]
             ],
@@ -236,7 +290,7 @@ def save_data():
             (
                 {
                     "name": step["name"],
-                    "template": f"assets/{step['template'].get()}",
+                    "template": f"assets/{base_template_name(step['template'].get())}",
                 }
                 if "template" in step
                 else {"name": step["name"]}
@@ -244,6 +298,7 @@ def save_data():
             for step in dict["steps"]
         ],
         "log_lvl": dict["log_lvl"].get(),
+        "window_scale": dict["window_scale"].get(),
     }
 
     with open(CONFIG_PATH, "w", encoding="utf-8") as yaml_file:
