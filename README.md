@@ -1,12 +1,11 @@
 # TBH Stash Bot
 
-Python image-search bot that finds UI templates on screen and clicks them. Built for New World stash automation, modeled after [new-world-fishing-bot](https://github.com/alandsamuel/new-world-fishing-bot).
+Python image-search bot that finds UI templates on screen and clicks them. 
 
 ## Requirements
 
 - Windows
 - Python 3.10+
-- New World at **1920x1080** with **100% Windows display scale**
 
 ## Setup
 
