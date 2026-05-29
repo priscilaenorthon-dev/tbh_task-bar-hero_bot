@@ -1,12 +1,12 @@
-# AGENTS.md — TBH Task-Bar-Hero Bot
+# AGENTS.md — TBH Helper
 
 Guidance for AI agents working in this repository.
 
 ## Project summary
 
-Windows-only Python bot for **Task Bar Hero (TBH)**. Uses **tkinter** GUI, **OpenCV** template matching, and **Win32** mouse/keyboard input to automate stash flow (open chest → auto fill → stash all → close) plus a background periodic stash/sort loop.
+Windows-only Python helper for **Task Bar Hero (TBH)**. Uses **tkinter** GUI, **OpenCV** template matching, and **Win32** mouse/keyboard input to automate stash flow (open chest → auto fill → stash all → close) plus a background periodic stash/sort loop.
 
-Entry point: `bot.py` → `gui_init()` → `gv.root.mainloop()`.
+Entry point: `main.py` → `gui_init()` → `gv.root.mainloop()`.
 
 ## Requirements
 
@@ -19,7 +19,7 @@ Do not introduce cross-platform abstractions unless explicitly requested. Do not
 ## Layout
 
 ```
-bot.py                 # Entry point
+main.py                # Entry point
 gui/                   # Tkinter UI (tabs, region draw, start/stop)
 functionality/         # stash_loop state machine, image_search
 utils/                 # config load/save, global_variables
@@ -41,8 +41,10 @@ assets/                # Template PNGs (base + scaled variants)
 | `search_region` | Screen coords for template search; set via GUI draw overlay or numeric fields |
 | `window_scale` | `1`, `1.25`, `1.5`, `2` — selects scaled template suffix (`_1-25`, `_1-50`, `_2`; scale `1` = no suffix) |
 | Template names in YAML/GUI | **Base names only** (e.g. `auto_fill.png`); resolve via `template_path_for()` |
-| Timings | Min/max ranges; use `random_ms()` and `random_timeout()` — avoid fixed delays for bot actions |
+| Timings | Min/max ranges; use `random_ms()` and `random_timeout()` — avoid fixed delays for automation actions |
 | `log_lvl` | Applied when user clicks Start Stash (`apply_log_level()`) |
+
+Process-facing name is **`TBH Helper`** (`APP_DISPLAY_NAME` in `utils/global_variables.py`). Do not add "bot" to window titles, logger names, or packaged exe names.
 
 When adding new template references, wire through `template_path_for()` so window scale works.
 
@@ -53,7 +55,7 @@ When adding new template references, wire through `template_path_for()` so windo
 - Prefer help text under settings explaining what each field changes.
 - Keep window resizable; avoid breaking scrollable tabs.
 
-## Bot logic
+## Automation logic
 
 - Core loop: `functionality/stash_loop.py` — step index in `gv.current_step_index`, scheduled via `gv.root.after`.
 - Step names are string-matched (`open_chest`, `auto_fill`, `stash_all`, …); changing step order/names requires YAML + code alignment.
@@ -80,7 +82,7 @@ If a scaled file is missing, `template_path_for()` warns and falls back to the b
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-python bot.py
+python main.py
 ```
 
 Optional EXE: see `README.md` (PyInstaller bundles `resources/` and `assets/`).

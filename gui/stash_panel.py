@@ -22,8 +22,8 @@ def stash_panel():
     _templates_tab(notebook)
     _control_tab(notebook)
 
-    footer = Frame(outer, pady=(8, 0))
-    footer.pack(fill="x", side="bottom")
+    footer = Frame(outer)
+    footer.pack(fill="x", side="bottom", pady=(8, 0))
 
     gv.status_label = Label(
         footer,

@@ -1,6 +1,7 @@
 import logging
 
 from utils.config import dict
+from utils.global_variables import APP_LOGGER_NAME
 
 _LOG_LEVELS = {
     "DEBUG": logging.DEBUG,
@@ -9,7 +10,7 @@ _LOG_LEVELS = {
     "ERROR": logging.ERROR,
 }
 
-_logger = logging.getLogger("tbh_bot")
+_logger = logging.getLogger(APP_LOGGER_NAME)
 
 if not _logger.handlers:
     handler = logging.StreamHandler()

@@ -1,8 +1,8 @@
 search_region:
-  x: 1
-  y: 824
-  width: 968
-  height: 612
+  x: 0
+  y: 806
+  width: 989
+  height: 633
 matching:
   threshold: 0.7
 timeouts:

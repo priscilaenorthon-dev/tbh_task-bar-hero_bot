@@ -1,6 +1,6 @@
-# TBH Stash Bot
+# TBH Helper
 
-Python image-search bot that finds UI templates on screen and clicks them.
+Python helper that finds UI templates on screen and clicks them.
 
 ## Requirements
 
@@ -13,7 +13,7 @@ Python image-search bot that finds UI templates on screen and clicks them.
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-python bot.py
+python main.py
 ```
 
 ## Usage
@@ -23,7 +23,7 @@ python bot.py
 3. Adjust **Timing** and **Templates** tabs as needed (each field has a short explanation).
 4. On the **Run** tab, choose log level and click **Start Stash**, then focus the game window.
 
-The bot loops through these steps:
+The app loops through these steps:
 
 1. Open chest — right-clicks boss or normal chest icon (boss checked first)
 2. Auto Fill — waits a **random** delay, then checks for combine
@@ -44,7 +44,7 @@ All delays and click positions use **min/max ranges** configured in the GUI (Tim
 - Periodic stash/sort cycle interval and stash→sort gap
 - Pixel offset from template center on every click
 
-Wider ranges look more human but slow the bot slightly.
+Wider ranges look more human but slow the loop slightly.
 
 ## Configuration
 
@@ -54,10 +54,10 @@ All settings are edited in the GUI and saved to `resources/config.yml` when you 
 
 ```bash
 pip install pyinstaller
-pyinstaller --add-data "resources;resources" --add-data "assets;assets" bot.py
+pyinstaller --name TBHHelper --add-data "resources;resources" --add-data "assets;assets" main.py
 ```
 
-The executable will be in `dist/bot/bot.exe`.
+The executable will be in `dist/TBHHelper/TBHHelper.exe`.
 
 ## Template images
 
