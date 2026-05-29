@@ -6,18 +6,31 @@ search_region:
 matching:
   threshold: 0.7
 timeouts:
-  loop_ms: 1500
+  loop_ms:
+    min: 1200
+    max: 1800
   after_click:
     min: 0.5
     max: 1.0
 combine_flow:
-  wait_ms: 3000
+  wait_ms:
+    min: 2500
+    max: 3500
   template: assets/combine.png
   back_template: assets/back_arrow.png
 periodic_stash_sort:
-  interval_ms: 30000
+  interval_ms:
+    min: 28000
+    max: 32000
+  between_clicks_ms:
+    min: 200
+    max: 600
   stash_template: assets/stash_all.png
   sort_template: assets/sort.png
+randomization:
+  click_offset_px:
+    min: -8
+    max: 8
 chest_check:
   templates:
   - name: boss_chest
