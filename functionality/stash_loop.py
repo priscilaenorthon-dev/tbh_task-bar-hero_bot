@@ -4,7 +4,7 @@ from utils.config import (
     chest_check_entries,
     dict,
     random_click_offset,
-    random_ms,
+    random_delay_ms,
     random_timeout,
     step_entries,
     template_path_for,
@@ -42,7 +42,7 @@ def stash_loop():
         gv.status_message = f"Waiting for {step['name']}..."
         debug(gv.status_message)
         _update_status_label()
-        gv.root.after(random_ms(dict["timeouts"]["loop_ms"]), stash_loop)
+        gv.root.after(random_delay_ms(dict["timeouts"]["loop"]), stash_loop)
         return
 
     center_x, center_y, score = match
@@ -51,16 +51,16 @@ def stash_loop():
 
     if step["name"] == "auto_fill":
         gv.combine_check_pending = True
-        wait_ms = random_ms(dict["combine_flow"]["wait_ms"])
+        wait_s = random_timeout(dict["combine_flow"]["wait"])
         gv.status_message = (
-            f"Auto fill clicked, checking for combine in {wait_ms / 1000:.1f}s..."
+            f"Auto fill clicked, checking for combine in {wait_s:.1f}s..."
         )
         _update_status_label()
-        gv.root.after(wait_ms, _check_combine_after_auto_fill)
+        gv.root.after(random_delay_ms(dict["combine_flow"]["wait"]), _check_combine_after_auto_fill)
         return
 
     _advance_to_next_step(step["name"])
-    delay_ms = int(random_timeout(dict["timeouts"]["after_click"]) * 1000)
+    delay_ms = random_delay_ms(dict["timeouts"]["after_click"])
     gv.root.after(delay_ms, stash_loop)
 
 
@@ -76,14 +76,14 @@ def _handle_open_chest_step(region, threshold):
         )
         _right_click_at(center_x, center_y)
         _advance_to_next_step("open_chest")
-        delay_ms = int(random_timeout(dict["timeouts"]["after_click"]) * 1000)
+        delay_ms = random_delay_ms(dict["timeouts"]["after_click"])
         gv.root.after(delay_ms, stash_loop)
         return
 
     gv.status_message = "Waiting for boss_chest or chest icon..."
     debug(gv.status_message)
     _update_status_label()
-    gv.root.after(random_ms(dict["timeouts"]["loop_ms"]), stash_loop)
+    gv.root.after(random_delay_ms(dict["timeouts"]["loop"]), stash_loop)
 
 
 def _check_combine_after_auto_fill():
@@ -104,7 +104,7 @@ def _check_combine_after_auto_fill():
         gv.current_step_index = _step_index("stash_all")
         gv.status_message = "No combine prompt, continuing to stash_all"
         _update_status_label()
-        delay_ms = int(random_timeout(dict["timeouts"]["after_click"]) * 1000)
+        delay_ms = random_delay_ms(dict["timeouts"]["after_click"])
         gv.root.after(delay_ms, stash_loop)
         return
 
@@ -119,7 +119,7 @@ def _check_combine_after_auto_fill():
         gv.status_message = "Combine clicked, waiting for back_arrow..."
         debug(gv.status_message)
         _update_status_label()
-        gv.root.after(random_ms(dict["timeouts"]["loop_ms"]), _click_back_after_combine)
+        gv.root.after(random_delay_ms(dict["timeouts"]["loop"]), _click_back_after_combine)
         return
 
     back_x, back_y, back_score = back_match
@@ -143,7 +143,7 @@ def _click_back_after_combine():
         gv.status_message = "Waiting for back_arrow after combine..."
         debug(gv.status_message)
         _update_status_label()
-        gv.root.after(random_ms(dict["timeouts"]["loop_ms"]), _click_back_after_combine)
+        gv.root.after(random_delay_ms(dict["timeouts"]["loop"]), _click_back_after_combine)
         return
 
     back_x, back_y, back_score = back_match
@@ -156,7 +156,7 @@ def _restart_loop(message):
     gv.current_step_index = 0
     gv.status_message = f"{message}, restarting from open_chest"
     _update_status_label()
-    delay_ms = int(random_timeout(dict["timeouts"]["after_click"]) * 1000)
+    delay_ms = random_delay_ms(dict["timeouts"]["after_click"])
     gv.root.after(delay_ms, stash_loop)
 
 
@@ -219,8 +219,7 @@ def periodic_stash_sort_loop():
         info(f"Periodic: found stash_all at ({stash_x}, {stash_y}) score={stash_score:.3f}")
         _click_at(stash_x, stash_y)
 
-        gap_ms = random_ms(dict["periodic_stash_sort"]["between_clicks_ms"])
-        gv.root.after(gap_ms, _periodic_sort_click, region, threshold, sort_template)
+        gv.root.after(random_delay_ms(dict["periodic_stash_sort"]["between_clicks"]), _periodic_sort_click, region, threshold, sort_template)
         return
 
     debug("Periodic: stash_all not found, skipping")
@@ -246,11 +245,11 @@ def _periodic_finish_cycle():
     if not gv.continue_stash:
         return
 
-    interval_ms = random_ms(dict["periodic_stash_sort"]["interval_ms"])
-    info(f"Periodic: next cycle in {interval_ms / 1000:.1f}s")
+    interval_s = random_timeout(dict["periodic_stash_sort"]["interval"])
+    info(f"Periodic: next cycle in {interval_s:.1f}s")
     space_bar()
     info("Periodic: Pressed space bar")
-    gv.root.after(interval_ms, periodic_stash_sort_loop)
+    gv.root.after(random_delay_ms(dict["periodic_stash_sort"]["interval"]), periodic_stash_sort_loop)
 
 
 def _update_status_label():

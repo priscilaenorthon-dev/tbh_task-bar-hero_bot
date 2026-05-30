@@ -1,5 +1,5 @@
 from functools import partial
-from tkinter import Button, Canvas, Entry, Frame, Label, Scrollbar, StringVar, ttk
+from tkinter import Button, Canvas, Entry, Frame, Label, Scrollbar, ttk
 
 import utils.global_variables as gv
 from gui.gui_functions import open_set_region_drag, popup_rectangle_window, start_stash
@@ -19,7 +19,6 @@ def stash_panel():
 
     _screen_tab(notebook)
     _timing_tab(notebook)
-    _templates_tab(notebook)
     _control_tab(notebook)
 
     footer = Frame(outer)
@@ -73,12 +72,8 @@ def _screen_tab(notebook):
         panel,
         row,
         "Screen rectangle where the bot looks for buttons and chest icons. "
-        "Smaller areas run faster; too small and templates may be missed.",
+        "Use Draw to set it; Preview shows the current region. Smaller areas run faster.",
     )
-    row = _region_field(panel, row, "X (left)", dict["search_region"]["x"])
-    row = _region_field(panel, row, "Y (top)", dict["search_region"]["y"])
-    row = _region_field(panel, row, "Width", dict["search_region"]["width"])
-    row = _region_field(panel, row, "Height", dict["search_region"]["height"])
 
     region = dict["search_region"]
     draw_button = Button(panel, text="Draw search region")
@@ -128,9 +123,8 @@ def _screen_tab(notebook):
     row = _help(
         panel,
         row,
-        "Match TBH in-game window scale. Templates load with suffix: "
-        "1 = no suffix (auto_fill.png), 1.25 = _1-25, 1.5 = _1-50, 2 = _2. "
-        "Filenames on the Templates tab are base names only.",
+        "Match TBH in-game window scale. Button images load with suffix: "
+        "1 = no suffix (auto_fill.png), 1.25 = _1-25, 1.5 = _1-50, 2 = _2.",
     )
 
     row = _section(panel, row, "Template matching")
@@ -156,11 +150,11 @@ def _timing_tab(notebook):
     row = 0
 
     row = _section(panel, row, "Poll delays (while waiting for UI)")
-    row = _ms_range_row(panel, row, "Loop retry", dict["timeouts"]["loop_ms"])
+    row = _seconds_range_row(panel, row, "Loop retry", dict["timeouts"]["loop"])
     row = _help(
         panel,
         row,
-        "When a button or chest icon is not found, the bot waits a random time in this range (ms) "
+        "When a button or chest icon is not found, the bot waits a random time in this range (seconds) "
         "before searching again. Wider ranges look less robotic.",
     )
 
@@ -174,31 +168,31 @@ def _timing_tab(notebook):
     )
 
     row = _section(panel, row, "Auto Fill → Combine check")
-    row = _ms_range_row(panel, row, "Wait before combine", dict["combine_flow"]["wait_ms"])
+    row = _seconds_range_row(panel, row, "Wait before combine", dict["combine_flow"]["wait"])
     row = _help(
         panel,
         row,
-        "After clicking Auto Fill, the bot waits a random time in this range (ms), then looks for "
+        "After clicking Auto Fill, the bot waits a random time in this range (seconds), then looks for "
         "the combine prompt. Too short may miss the prompt; too long slows the loop.",
     )
 
     row = _section(panel, row, "Background stash / sort")
-    row = _ms_range_row(
-        panel, row, "Cycle interval", dict["periodic_stash_sort"]["interval_ms"]
+    row = _seconds_range_row(
+        panel, row, "Cycle interval", dict["periodic_stash_sort"]["interval"]
     )
     row = _help(
         panel,
         row,
         "While running, the bot periodically tries Stash All + Sort and presses Space. "
-        "Each cycle is scheduled after a random delay in this range (ms).",
+        "Each cycle is scheduled after a random delay in this range (seconds).",
     )
-    row = _ms_range_row(
-        panel, row, "Stash → Sort gap", dict["periodic_stash_sort"]["between_clicks_ms"]
+    row = _seconds_range_row(
+        panel, row, "Stash → Sort gap", dict["periodic_stash_sort"]["between_clicks"]
     )
     row = _help(
         panel,
         row,
-        "Random delay (ms) between the periodic Stash All click and the Sort click when both are found.",
+        "Random delay (seconds) between the periodic Stash All click and the Sort click when both are found.",
     )
 
     row = _section(panel, row, "Click position jitter")
@@ -211,42 +205,6 @@ def _timing_tab(notebook):
         "Each click adds a random X/Y offset within this range (pixels) from the template center. "
         "Helps avoid identical pixel-perfect clicks. Use negative min (e.g. -8) and positive max (e.g. 8).",
     )
-
-
-def _templates_tab(notebook):
-    panel = _scrollable_tab(notebook, "Templates")
-    row = 0
-
-    row = _section(panel, row, "Chest icons (open stash)")
-    row = _help(
-        panel,
-        row,
-        "Base PNG filenames in assets/ (no scale suffix). The bot loads the scaled file "
-        "from Window scale on the Screen tab, e.g. auto_fill_1-25.png at scale 1.25.",
-    )
-    for entry in dict["chest_check"]:
-        row = _template_row(panel, row, entry["name"], entry["template"])
-
-    row = _section(panel, row, "Main stash steps")
-    row = _help(
-        panel,
-        row,
-        "Order is fixed: open chest → auto fill → stash all → close. Only steps with templates are listed.",
-    )
-    for step in dict["steps"]:
-        if "template" not in step:
-            continue
-        row = _template_row(panel, row, step["name"], step["template"])
-
-    row = _section(panel, row, "Combine flow")
-    row = _template_row(panel, row, "Combine button", dict["combine_flow"]["template"])
-    row = _template_row(panel, row, "Back arrow", dict["combine_flow"]["back_template"])
-
-    row = _section(panel, row, "Periodic stash / sort")
-    row = _template_row(
-        panel, row, "Stash All", dict["periodic_stash_sort"]["stash_template"]
-    )
-    row = _template_row(panel, row, "Sort", dict["periodic_stash_sort"]["sort_template"])
 
 
 def _control_tab(notebook):
@@ -299,25 +257,6 @@ def _help(parent, row, text):
     return row + 1
 
 
-def _region_field(parent, row, label, variable):
-    Label(parent, text=label, font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
-    Entry(parent, textvariable=variable, width=10).grid(
-        row=row, column=1, sticky="w", padx=(8, 0)
-    )
-    return row + 1
-
-
-def _ms_range_row(parent, row, label, range_dict):
-    return _range_row(
-        parent,
-        row,
-        label,
-        range_dict["min"],
-        range_dict["max"],
-        suffix=" ms",
-    )
-
-
 def _seconds_range_row(parent, row, label, range_dict):
     return _range_row(
         parent,
@@ -355,12 +294,4 @@ def _range_row(parent, row, label, min_var, max_var, is_single=False, suffix="")
 
     if suffix:
         Label(frame, text=suffix.strip(), font=_HELP_FONT).pack(side="left", padx=(6, 0))
-    return row + 1
-
-
-def _template_row(parent, row, label, variable: StringVar):
-    Label(parent, text=label, font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
-    Entry(parent, textvariable=variable, width=28).grid(
-        row=row, column=1, sticky="w", padx=(8, 0)
-    )
     return row + 1

@@ -20,7 +20,8 @@ def _template_path(relative_path: str) -> str:
     return str((BASE_DIR / relative_path).resolve())
 
 
-def _ms_range(raw_value, default_spread=0.15):
+def _legacy_ms_range(raw_value, default_spread=0.15):
+    """Parse legacy config values stored in milliseconds."""
     if isinstance(raw_value, dict):
         return int(raw_value["min"]), int(raw_value["max"])
     value = int(raw_value)
@@ -45,32 +46,33 @@ def _offset_range(raw_config):
     return -value, value
 
 
+def _migrate_timing(section, old_key, new_key, default_min, default_max):
+    """Upgrade legacy *_ms keys to second-based min/max dicts."""
+    if new_key in section:
+        min_s, max_s = _seconds_range(section[new_key])
+    elif old_key in section:
+        min_ms, max_ms = _legacy_ms_range(section[old_key])
+        min_s, max_s = round(min_ms / 1000, 2), round(max_ms / 1000, 2)
+    else:
+        min_s, max_s = default_min, default_max
+    section[new_key] = {"min": min_s, "max": max_s}
+    section.pop(old_key, None)
+
+
 def _normalize_config(config):
     """Upgrade older config.yml shapes to min/max ranges."""
-    loop_min, loop_max = _ms_range(config["timeouts"]["loop_ms"])
-    config["timeouts"]["loop_ms"] = {"min": loop_min, "max": loop_max}
+    _migrate_timing(config["timeouts"], "loop_ms", "loop", 1.2, 1.8)
 
     after_click = config["timeouts"]["after_click"]
     if not isinstance(after_click, dict):
         min_s, max_s = _seconds_range(after_click)
         config["timeouts"]["after_click"] = {"min": min_s, "max": max_s}
 
-    wait_min, wait_max = _ms_range(config["combine_flow"]["wait_ms"])
-    config["combine_flow"]["wait_ms"] = {"min": wait_min, "max": wait_max}
-
-    interval_raw = config["periodic_stash_sort"]["interval_ms"]
-    interval_min, interval_max = _ms_range(interval_raw)
-    config["periodic_stash_sort"]["interval_ms"] = {
-        "min": interval_min,
-        "max": interval_max,
-    }
+    _migrate_timing(config["combine_flow"], "wait_ms", "wait", 2.5, 3.5)
 
     periodic = config["periodic_stash_sort"]
-    if "between_clicks_ms" not in periodic:
-        periodic["between_clicks_ms"] = {"min": 200, "max": 600}
-    elif not isinstance(periodic["between_clicks_ms"], dict):
-        b_min, b_max = _ms_range(periodic["between_clicks_ms"], default_spread=0.25)
-        periodic["between_clicks_ms"] = {"min": b_min, "max": b_max}
+    _migrate_timing(periodic, "interval_ms", "interval", 28.0, 32.0)
+    _migrate_timing(periodic, "between_clicks_ms", "between_clicks", 0.2, 0.6)
 
     if "randomization" not in config:
         config["randomization"] = {}
@@ -115,9 +117,9 @@ dict = {
         "threshold": DoubleVar(value=config["matching"]["threshold"]),
     },
     "timeouts": {
-        "loop_ms": {
-            "min": IntVar(value=config["timeouts"]["loop_ms"]["min"]),
-            "max": IntVar(value=config["timeouts"]["loop_ms"]["max"]),
+        "loop": {
+            "min": DoubleVar(value=config["timeouts"]["loop"]["min"]),
+            "max": DoubleVar(value=config["timeouts"]["loop"]["max"]),
         },
         "after_click": {
             "min": DoubleVar(value=config["timeouts"]["after_click"]["min"]),
@@ -125,9 +127,9 @@ dict = {
         },
     },
     "combine_flow": {
-        "wait_ms": {
-            "min": IntVar(value=config["combine_flow"]["wait_ms"]["min"]),
-            "max": IntVar(value=config["combine_flow"]["wait_ms"]["max"]),
+        "wait": {
+            "min": DoubleVar(value=config["combine_flow"]["wait"]["min"]),
+            "max": DoubleVar(value=config["combine_flow"]["wait"]["max"]),
         },
         "template": StringVar(value=_load_template_basename(config["combine_flow"]["template"])),
         "back_template": StringVar(
@@ -135,13 +137,13 @@ dict = {
         ),
     },
     "periodic_stash_sort": {
-        "interval_ms": {
-            "min": IntVar(value=config["periodic_stash_sort"]["interval_ms"]["min"]),
-            "max": IntVar(value=config["periodic_stash_sort"]["interval_ms"]["max"]),
+        "interval": {
+            "min": DoubleVar(value=config["periodic_stash_sort"]["interval"]["min"]),
+            "max": DoubleVar(value=config["periodic_stash_sort"]["interval"]["max"]),
         },
-        "between_clicks_ms": {
-            "min": IntVar(value=config["periodic_stash_sort"]["between_clicks_ms"]["min"]),
-            "max": IntVar(value=config["periodic_stash_sort"]["between_clicks_ms"]["max"]),
+        "between_clicks": {
+            "min": DoubleVar(value=config["periodic_stash_sort"]["between_clicks"]["min"]),
+            "max": DoubleVar(value=config["periodic_stash_sort"]["between_clicks"]["max"]),
         },
         "stash_template": StringVar(
             value=_load_template_basename(config["periodic_stash_sort"]["stash_template"])
@@ -242,9 +244,9 @@ def save_data():
             "threshold": dict["matching"]["threshold"].get(),
         },
         "timeouts": {
-            "loop_ms": {
-                "min": dict["timeouts"]["loop_ms"]["min"].get(),
-                "max": dict["timeouts"]["loop_ms"]["max"].get(),
+            "loop": {
+                "min": dict["timeouts"]["loop"]["min"].get(),
+                "max": dict["timeouts"]["loop"]["max"].get(),
             },
             "after_click": {
                 "min": dict["timeouts"]["after_click"]["min"].get(),
@@ -252,21 +254,21 @@ def save_data():
             },
         },
         "combine_flow": {
-            "wait_ms": {
-                "min": dict["combine_flow"]["wait_ms"]["min"].get(),
-                "max": dict["combine_flow"]["wait_ms"]["max"].get(),
+            "wait": {
+                "min": dict["combine_flow"]["wait"]["min"].get(),
+                "max": dict["combine_flow"]["wait"]["max"].get(),
             },
             "template": f"assets/{base_template_name(dict['combine_flow']['template'].get())}",
             "back_template": f"assets/{base_template_name(dict['combine_flow']['back_template'].get())}",
         },
         "periodic_stash_sort": {
-            "interval_ms": {
-                "min": dict["periodic_stash_sort"]["interval_ms"]["min"].get(),
-                "max": dict["periodic_stash_sort"]["interval_ms"]["max"].get(),
+            "interval": {
+                "min": dict["periodic_stash_sort"]["interval"]["min"].get(),
+                "max": dict["periodic_stash_sort"]["interval"]["max"].get(),
             },
-            "between_clicks_ms": {
-                "min": dict["periodic_stash_sort"]["between_clicks_ms"]["min"].get(),
-                "max": dict["periodic_stash_sort"]["between_clicks_ms"]["max"].get(),
+            "between_clicks": {
+                "min": dict["periodic_stash_sort"]["between_clicks"]["min"].get(),
+                "max": dict["periodic_stash_sort"]["between_clicks"]["max"].get(),
             },
             "stash_template": f"assets/{base_template_name(dict['periodic_stash_sort']['stash_template'].get())}",
             "sort_template": f"assets/{base_template_name(dict['periodic_stash_sort']['sort_template'].get())}",
@@ -313,12 +315,8 @@ def random_timeout(range_dict):
     return round(random.uniform(low, high), 2)
 
 
-def random_ms(range_dict):
-    low = int(range_dict["min"].get() if hasattr(range_dict["min"], "get") else range_dict["min"])
-    high = int(range_dict["max"].get() if hasattr(range_dict["max"], "get") else range_dict["max"])
-    if low > high:
-        low, high = high, low
-    return random.randint(low, high)
+def random_delay_ms(range_dict):
+    return int(random_timeout(range_dict) * 1000)
 
 
 def random_click_offset():

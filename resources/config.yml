@@ -1,30 +1,30 @@
 search_region:
   x: 0
-  y: 806
-  width: 989
-  height: 633
+  y: 829
+  width: 978
+  height: 610
 matching:
   threshold: 0.7
 timeouts:
-  loop_ms:
-    min: 1200
-    max: 1800
+  loop:
+    min: 1.2
+    max: 1.8
   after_click:
     min: 0.5
     max: 1.0
 combine_flow:
-  wait_ms:
-    min: 2500
-    max: 3500
+  wait:
+    min: 2.5
+    max: 3.5
   template: assets/combine.png
   back_template: assets/back_arrow.png
 periodic_stash_sort:
-  interval_ms:
-    min: 28000
-    max: 32000
-  between_clicks_ms:
-    min: 200
-    max: 600
+  interval:
+    min: 28.0
+    max: 32.0
+  between_clicks:
+    min: 0.2
+    max: 0.6
   stash_template: assets/stash_all.png
   sort_template: assets/sort.png
 randomization:

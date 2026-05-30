@@ -41,7 +41,7 @@ assets/                # Template PNGs (base + scaled variants)
 | `search_region` | Screen coords for template search; set via GUI draw overlay or numeric fields |
 | `window_scale` | `1`, `1.25`, `1.5`, `2` — selects scaled template suffix (`_1-25`, `_1-50`, `_2`; scale `1` = no suffix) |
 | Template names in YAML/GUI | **Base names only** (e.g. `auto_fill.png`); resolve via `template_path_for()` |
-| Timings | Min/max ranges; use `random_ms()` and `random_timeout()` — avoid fixed delays for automation actions |
+| Timings | Min/max ranges in **seconds**; use `random_timeout()` / `random_delay_ms()` — avoid fixed delays for automation actions |
 | `log_lvl` | Applied when user clicks Start Stash (`apply_log_level()`) |
 
 Process-facing name is **`TBH Helper`** (`APP_DISPLAY_NAME` in `utils/global_variables.py`). Do not add "bot" to window titles, logger names, or packaged exe names.
