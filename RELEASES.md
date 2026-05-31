@@ -1,8 +1,8 @@
 # Releases & builds
 
-How to build **TBH Helper** locally, download CI artifacts, and publish GitHub releases.
+How to build **TBH Helper** locally and publish GitHub releases.
 
-Workflow file: [.github/workflows/build.yml](.github/workflows/build.yml)
+Workflow file: [.github/workflows/release.yml](.github/workflows/release.yml)
 
 ---
 
@@ -29,46 +29,11 @@ Do **not** commit `dist/`, `build/`, or `.exe` files to git.
 
 ---
 
-## Automated builds (GitHub Actions)
+## Automated releases (GitHub Actions)
 
-The workflow **Build Windows executable** runs when:
+The **Release** workflow runs when you push a version tag (`v*`, e.g. `v1.0.0`).
 
-- You push to `main` or `master`
-- You open a pull request to `main` or `master`
-- You push a version tag (`v*`, e.g. `v1.0.0`)
-- You trigger it manually (**Actions** → **Run workflow**)
-
-Each successful run produces **TBHHelper-Windows.zip** (the full `dist/TBHHelper/` folder, zipped).
-
-Artifacts are kept for **90 days**.
-
----
-
-## Download a build (no release tag)
-
-Use this when you just want the latest exe from CI.
-
-1. Open the repo on GitHub → **Actions**
-2. Click **Build Windows executable**
-3. Open the latest **green** run
-4. Scroll to **Artifacts** → download **TBHHelper-Windows**
-5. Unzip → run `TBHHelper/TBHHelper.exe`
-
-### Trigger a build manually
-
-1. **Actions** → **Build Windows executable**
-2. **Run workflow** → choose branch (usually `main`) → **Run workflow**
-3. Wait for the green checkmark, then download the artifact as above
-
----
-
-## Publish a GitHub Release
-
-Use this when you want a version listed under **Releases** with the zip attached.
-
-1. Make sure your changes are merged and pushed to `main`
-2. Choose a version tag (examples: `v1.0.0`, `v1.0.1`, `v2.0.0`)
-3. Create and push the tag:
+It builds the Windows executable, zips `dist/TBHHelper/`, and creates a GitHub Release with **TBHHelper-Windows.zip** attached.
 
 ```bash
 git checkout main
@@ -77,16 +42,13 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-4. GitHub Actions runs the build and attaches **TBHHelper-Windows.zip** to the new release
-5. Open **Releases** on GitHub to confirm the zip is there
-
-Replace `v1.0.0` with your actual version each time.
+Replace `v1.0.0` with your actual version each time. Open **Releases** on GitHub to download the zip.
 
 ### Release checklist
 
 - [ ] Changes pushed to `main`
-- [ ] Tag name starts with `v` (e.g. `v1.0.0`) — required for the release step
-- [ ] Actions workflow finished successfully
+- [ ] Tag name starts with `v` (e.g. `v1.0.0`)
+- [ ] **Release** workflow finished successfully
 - [ ] **TBHHelper-Windows.zip** appears on the release page
 - [ ] Smoke-test: unzip and run `TBHHelper.exe` on Windows
 
@@ -96,10 +58,9 @@ Replace `v1.0.0` with your actual version each time.
 
 | Problem | What to try |
 |--------|-------------|
-| No **Artifacts** section | Build failed — open the run and read the error log |
 | Release has no zip | Tag must be `v*` (e.g. `v1.0.0`), not `1.0.0` |
+| Workflow did not run | Confirm the tag was pushed: `git push origin v1.0.0` |
 | Exe won't start | Run from the unzipped `TBHHelper` folder (not only the `.exe` moved alone) |
-| Old build | Download latest green Actions run or push a new tag |
 
 ---
 
@@ -109,5 +70,4 @@ Replace `v1.0.0` with your actual version each time.
 |------|------------------|
 | Run from source | `python main.py` |
 | Build locally | `pyinstaller --name TBHHelper --add-data "resources;resources" --add-data "assets;assets" main.py` |
-| Latest CI zip | **Actions** → latest run → **TBHHelper-Windows** artifact |
 | New release | `git tag v1.0.0 && git push origin v1.0.0` |

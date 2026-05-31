@@ -56,7 +56,7 @@ All settings are edited in the GUI and saved to `resources/config.yml` when you 
 
 ## Building an executable
 
-See **[RELEASES.md](RELEASES.md)** for local PyInstaller builds, GitHub Actions artifacts, and publishing releases.
+See **[RELEASES.md](RELEASES.md)** for local PyInstaller builds and publishing GitHub releases.
 
 Quick local build:
 

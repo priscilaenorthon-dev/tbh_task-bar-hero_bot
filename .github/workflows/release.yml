@@ -1,18 +1,14 @@
-name: Build Windows executable
+name: Release
 
 on:
   push:
-    branches: [main, master]
     tags: ["v*"]
-  pull_request:
-    branches: [main, master]
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     runs-on: windows-latest
 
     steps:
@@ -40,18 +36,12 @@ jobs:
           main.py
 
       - name: Zip release folder
-        run: Compress-Archive -Path dist/TBHHelper -DestinationPath dist/TBHHelper-Windows.zip
+        run: Compress-Archive -Path dist/TBHHelper -DestinationPath TBHHelper-Windows.zip -Force
 
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: TBHHelper-Windows
-          path: dist/TBHHelper-Windows.zip
-          retention-days: 90
-
-      - name: Upload to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/TBHHelper-Windows.zip
+          tag_name: ${{ github.ref_name }}
+          name: TBH Helper ${{ github.ref_name }}
+          files: TBHHelper-Windows.zip
           generate_release_notes: true

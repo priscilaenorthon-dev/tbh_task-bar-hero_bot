@@ -85,7 +85,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Optional EXE and GitHub releases: see `RELEASES.md`. CI: `.github/workflows/build.yml`.
+Optional EXE and GitHub releases: see `RELEASES.md`. CI: `.github/workflows/release.yml`.
 
 ## Common tasks
 
