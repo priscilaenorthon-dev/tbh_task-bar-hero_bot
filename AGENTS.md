@@ -42,6 +42,7 @@ assets/                # Template PNGs (base + scaled variants)
 | `window_scale` | `1`, `1.25`, `1.5`, `2` — selects scaled template suffix (`_1-25`, `_1-50`, `_2`; scale `1` = no suffix) |
 | Template names in YAML/GUI | **Base names only** (e.g. `auto_fill.png`); resolve via `template_path_for()` |
 | Timings | Min/max ranges in **seconds**; use `random_timeout()` / `random_delay_ms()` — avoid fixed delays for automation actions |
+| `timeouts.step_wait` | Max time (random in range) to poll for one missing chest/step template; then skip to next step via `_skip_to_next_step()` |
 | `log_lvl` | Applied when user clicks Start Stash (`apply_log_level()`) |
 
 Process-facing name is **`TBH Helper`** (`APP_DISPLAY_NAME` in `utils/global_variables.py`). Do not add "bot" to window titles, logger names, or packaged exe names.
@@ -57,10 +58,14 @@ When adding new template references, wire through `template_path_for()` so windo
 
 ## Automation logic
 
+Full diagrams and transition tables: **[docs/automation.md](docs/automation.md)**.
+
 - Core loop: `functionality/stash_loop.py` — step index in `gv.current_step_index`, scheduled via `gv.root.after`.
 - Step names are string-matched (`open_chest`, `auto_fill`, `stash_all`, …); changing step order/names requires YAML + code alignment.
-- Image search: `functionality/image_search.py` — `find_template(region, path, threshold)` returns center in **screen** coordinates.
+- **Missing templates:** poll on `timeouts.loop` until `timeouts.step_wait` elapses (`gv.step_wait_deadline`), then `_skip_to_next_step()` advances `current_step_index` (no full loop restart). Combine-without-prompt jumps to `stash_all` in one shot; successful combine+back uses `_restart_loop()` from step 0.
+- Image search: `functionality/image_search.py` — `find_template(region, path, threshold)` returns center in **screen** coordinates. Template paths via `template_path_for()` / `step_entries()` — see doc for scale suffix rules.
 - Clicks: `wrappers/win32api_wrapper.py`; apply jitter via `random_click_offset()` in stash_loop, not raw center clicks.
+- Periodic stash/sort: missing templates skip that click only; cycle reschedules on `periodic_stash_sort.interval`.
 
 ## Assets
 
