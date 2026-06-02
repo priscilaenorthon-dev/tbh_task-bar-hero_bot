@@ -1,4 +1,4 @@
-# TBH Helper
+# TBH (Task Bar Hero) Helper
 
 Python helper that finds UI templates on screen and clicks them.
 
