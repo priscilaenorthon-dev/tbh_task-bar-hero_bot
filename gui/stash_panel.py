@@ -33,7 +33,7 @@ def stash_panel():
     )
     gv.status_label.pack(fill="x", pady=(0, 6))
 
-    start_button = Button(footer, text="Start Stash", width=24)
+    start_button = Button(footer, text="Iniciar Stash", width=24)
     start_button.configure(command=partial(start_stash, start_button))
     start_button.pack(fill="x")
 
@@ -64,19 +64,19 @@ def _scrollable_tab(notebook, title):
 
 
 def _screen_tab(notebook):
-    panel = _scrollable_tab(notebook, "Screen")
+    panel = _scrollable_tab(notebook, "Tela")
     row = 0
 
-    row = _section(panel, row, "Search region")
+    row = _section(panel, row, "Região de busca")
     row = _help(
         panel,
         row,
-        "Screen rectangle where the bot looks for buttons and chest icons. "
-        "Use Draw to set it; Preview shows the current region. Smaller areas run faster.",
+        "Retângulo da tela onde o bot procura botões e ícones de baú. "
+        "Use Desenhar para definir; Visualizar mostra a região atual. Áreas menores são mais rápidas.",
     )
 
     region = dict["search_region"]
-    draw_button = Button(panel, text="Draw search region")
+    draw_button = Button(panel, text="Desenhar região de busca")
     draw_button.configure(
         command=partial(
             open_set_region_drag,
@@ -89,7 +89,7 @@ def _screen_tab(notebook):
     draw_button.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(4, 4))
     row += 1
 
-    preview_button = Button(panel, text="Preview region")
+    preview_button = Button(panel, text="Visualizar região")
     preview_button.configure(
         command=partial(
             popup_rectangle_window,
@@ -105,12 +105,14 @@ def _screen_tab(notebook):
     row = _help(
         panel,
         row,
-        "Draw: dimmed fullscreen overlay — left-click and drag (watch the console for Region draw: logs). "
-        "Set log level to DEBUG on the Run tab for drag coordinates. Preview: click once to close.",
+        "Desenhar: sobreposição escurecida em tela cheia — clique esquerdo e arraste "
+        "(veja o console para logs de Desenho de região:). "
+        "Configure o nível de log para DEBUG na aba Executar para coordenadas de arrastar. "
+        "Visualizar: clique uma vez para fechar.",
     )
 
-    row = _section(panel, row, "Game window scale")
-    Label(panel, text="UI scale", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
+    row = _section(panel, row, "Escala da janela do jogo")
+    Label(panel, text="Escala de UI", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
     scale_combo = ttk.Combobox(
         panel,
         textvariable=dict["window_scale"],
@@ -123,15 +125,15 @@ def _screen_tab(notebook):
     row = _help(
         panel,
         row,
-        "Match TBH in-game window scale. Button images load with suffix: "
-        "1 = no suffix (auto_fill.png), 1.25 = _1-25, 1.5 = _1-50, 2 = _2.",
+        "Corresponda à escala da janela do TBH no jogo. As imagens dos botões carregam com sufixo: "
+        "1 = sem sufixo (auto_fill.png), 1.25 = _1-25, 1.5 = _1-50, 2 = _2.",
     )
 
-    row = _section(panel, row, "Template matching")
+    row = _section(panel, row, "Comparação de templates")
     row = _range_row(
         panel,
         row,
-        "Match threshold",
+        "Limiar de correspondência",
         dict["matching"]["threshold"],
         dict["matching"]["threshold"],
         is_single=True,
@@ -140,88 +142,89 @@ def _screen_tab(notebook):
     row = _help(
         panel,
         row,
-        "How closely a screenshot must match a template (0–1). Lower = more lenient, more false positives. "
-        "Changes apply on the next search while the bot is running.",
+        "O quão próximo um screenshot deve corresponder a um template (0–1). "
+        "Menor = mais permissivo, mais falsos positivos. "
+        "Alterações aplicadas na próxima busca enquanto o bot estiver rodando.",
     )
 
 
 def _timing_tab(notebook):
-    panel = _scrollable_tab(notebook, "Timing")
+    panel = _scrollable_tab(notebook, "Temporização")
     row = 0
 
-    row = _section(panel, row, "Poll delays (while waiting for UI)")
-    row = _seconds_range_row(panel, row, "Loop retry", dict["timeouts"]["loop"])
+    row = _section(panel, row, "Atrasos de sondagem (aguardando UI)")
+    row = _seconds_range_row(panel, row, "Repetição do loop", dict["timeouts"]["loop"])
     row = _help(
         panel,
         row,
-        "When a button or chest icon is not found, the bot waits a random time in this range (seconds) "
-        "before searching again. Wider ranges look less robotic.",
+        "Quando um botão ou ícone de baú não é encontrado, o bot aguarda um tempo aleatório "
+        "neste intervalo (segundos) antes de buscar novamente. Intervalos mais amplos parecem menos robóticos.",
     )
-    row = _seconds_range_row(panel, row, "Step wait limit", dict["timeouts"]["step_wait"])
+    row = _seconds_range_row(panel, row, "Limite de espera da etapa", dict["timeouts"]["step_wait"])
     row = _help(
         panel,
         row,
-        "While waiting for a chest icon or stash step button, the helper gives up after a random time "
-        "in this range (seconds) and skips to the next step. Prevents getting stuck forever.",
-    )
-
-    row = _section(panel, row, "After successful clicks")
-    row = _seconds_range_row(panel, row, "Pause after click", dict["timeouts"]["after_click"])
-    row = _help(
-        panel,
-        row,
-        "Random pause (seconds) after stash steps, opening a chest, or finishing combine. "
-        "Gives the game UI time to animate before the next action.",
+        "Enquanto aguarda um ícone de baú ou botão de etapa do stash, o assistente desiste após um tempo "
+        "aleatório neste intervalo (segundos) e pula para a próxima etapa. Evita ficar preso indefinidamente.",
     )
 
-    row = _section(panel, row, "Auto Fill → Combine check")
-    row = _seconds_range_row(panel, row, "Wait before combine", dict["combine_flow"]["wait"])
+    row = _section(panel, row, "Após cliques bem-sucedidos")
+    row = _seconds_range_row(panel, row, "Pausa após clique", dict["timeouts"]["after_click"])
     row = _help(
         panel,
         row,
-        "After clicking Auto Fill, the bot waits a random time in this range (seconds), then looks for "
-        "the combine prompt. Too short may miss the prompt; too long slows the loop.",
+        "Pausa aleatória (segundos) após etapas de stash, abrir um baú ou finalizar combine. "
+        "Dá tempo para a UI do jogo animar antes da próxima ação.",
     )
 
-    row = _section(panel, row, "Background stash / sort")
+    row = _section(panel, row, "Auto Fill → Verificação de combine")
+    row = _seconds_range_row(panel, row, "Espera antes do combine", dict["combine_flow"]["wait"])
+    row = _help(
+        panel,
+        row,
+        "Após clicar em Auto Fill, o bot aguarda um tempo aleatório neste intervalo (segundos), "
+        "depois procura o prompt de combine. Muito curto pode perder o prompt; muito longo atrasa o loop.",
+    )
+
+    row = _section(panel, row, "Stash / sort em segundo plano")
     row = _seconds_range_row(
-        panel, row, "Cycle interval", dict["periodic_stash_sort"]["interval"]
+        panel, row, "Intervalo do ciclo", dict["periodic_stash_sort"]["interval"]
     )
     row = _help(
         panel,
         row,
-        "While running, the bot periodically tries Stash All + Sort and presses Space. "
-        "Each cycle is scheduled after a random delay in this range (seconds).",
+        "Durante a execução, o bot tenta periodicamente Stash All + Sort e pressiona Espaço. "
+        "Cada ciclo é agendado após um atraso aleatório neste intervalo (segundos).",
     )
     row = _seconds_range_row(
-        panel, row, "Stash → Sort gap", dict["periodic_stash_sort"]["between_clicks"]
+        panel, row, "Intervalo Stash → Sort", dict["periodic_stash_sort"]["between_clicks"]
     )
     row = _help(
         panel,
         row,
-        "Random delay (seconds) between the periodic Stash All click and the Sort click when both are found.",
+        "Atraso aleatório (segundos) entre o clique periódico em Stash All e o clique em Sort quando ambos são encontrados.",
     )
 
-    row = _section(panel, row, "Click position jitter")
+    row = _section(panel, row, "Variação de posição do clique")
     row = _int_range_row(
-        panel, row, "Pixel offset", dict["randomization"]["click_offset_px"]
+        panel, row, "Deslocamento em pixels", dict["randomization"]["click_offset_px"]
     )
     row = _help(
         panel,
         row,
-        "Each click adds a random X/Y offset within this range (pixels) from the template center. "
-        "Helps avoid identical pixel-perfect clicks. Use negative min (e.g. -8) and positive max (e.g. 8).",
+        "Cada clique adiciona um deslocamento X/Y aleatório neste intervalo (pixels) a partir do centro do template. "
+        "Evita cliques idênticos no mesmo pixel. Use mín negativo (ex.: -8) e máx positivo (ex.: 8).",
     )
 
 
 def _control_tab(notebook):
     panel = Frame(notebook, padx=10, pady=10)
-    notebook.add(panel, text="Run")
+    notebook.add(panel, text="Executar")
 
     row = 0
-    row = _section(panel, row, "Logging")
+    row = _section(panel, row, "Registro de log")
     log_values = ("DEBUG", "INFO", "WARNING", "ERROR")
-    Label(panel, text="Log level", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
+    Label(panel, text="Nível de log", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
     log_combo = ttk.Combobox(
         panel,
         textvariable=dict["log_lvl"],
@@ -234,17 +237,17 @@ def _control_tab(notebook):
     row = _help(
         panel,
         row,
-        "Console detail while the bot runs. DEBUG shows every template score; INFO is recommended. "
-        "Applied when you click Start Stash (button below the tabs).",
+        "Detalhe do console enquanto o bot roda. DEBUG mostra o score de cada template; INFO é recomendado. "
+        "Aplicado quando você clica em Iniciar Stash (botão abaixo das abas).",
     )
     row = _help(
         panel,
         row,
-        "All settings are read live while the bot runs. "
-        "Config is saved to resources/config.yml when you close the app.",
+        "Todas as configurações são lidas em tempo real enquanto o bot roda. "
+        "A configuração é salva em resources/config.yml quando você fecha o app.",
     )
 
-    row = _section(panel, row, "Diagnostics")
+    row = _section(panel, row, "Diagnóstico")
     diag_frame = Frame(panel)
     diag_frame.grid(row=row, column=0, columnspan=2, sticky="nsew", pady=(4, 4))
     diag_scroll = Scrollbar(diag_frame, orient="vertical")
@@ -262,7 +265,7 @@ def _control_tab(notebook):
     diag_scroll.pack(side="right", fill="y")
     row += 1
 
-    diag_button = Button(panel, text="Run diagnostics")
+    diag_button = Button(panel, text="Executar diagnóstico")
     diag_button.configure(command=partial(run_diagnostics, diag_button, diag_text))
     diag_button.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, 4))
     row += 1
@@ -270,9 +273,10 @@ def _control_tab(notebook):
     row = _help(
         panel,
         row,
-        "Checks search region, screen capture, template files, and image finder scores for every "
-        "configured template. WARN means the search ran but nothing matched (focus game UI in region). "
-        "Set log level to DEBUG for per-template scores in the console. No clicks are performed.",
+        "Verifica região de busca, captura de tela, arquivos de template e scores do buscador de imagem "
+        "para cada template configurado. AVISO significa que a busca rodou mas nada foi encontrado "
+        "(coloque a UI do jogo na região). Configure o nível de log para DEBUG para ver scores por template "
+        "no console. Nenhum clique é realizado.",
     )
 
 
@@ -325,9 +329,9 @@ def _range_row(parent, row, label, min_var, max_var, is_single=False, suffix="")
     if is_single:
         Entry(frame, textvariable=min_var, width=8).pack(side="left")
     else:
-        Label(frame, text="min", font=_HELP_FONT).pack(side="left")
+        Label(frame, text="mín", font=_HELP_FONT).pack(side="left")
         Entry(frame, textvariable=min_var, width=7).pack(side="left", padx=(4, 8))
-        Label(frame, text="max", font=_HELP_FONT).pack(side="left")
+        Label(frame, text="máx", font=_HELP_FONT).pack(side="left")
         Entry(frame, textvariable=max_var, width=7).pack(side="left", padx=(4, 0))
 
     if suffix:
