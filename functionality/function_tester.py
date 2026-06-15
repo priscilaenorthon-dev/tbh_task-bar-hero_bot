@@ -17,7 +17,7 @@ Result = tuple[str, str, str]  # (check_name, status, detail) — status: PASS |
 
 
 def run_diagnostics() -> list[Result]:
-    """Run non-destructive checks (no clicks). Returns list of (name, status, detail)."""
+    """Executa verificações não-destrutivas (sem cliques). Retorna lista de (nome, status, detalhe)."""
     results: list[Result] = []
     threshold = dict["matching"]["threshold"].get()
     region = _search_region()
@@ -74,14 +74,14 @@ def _check_search_region(region) -> Result:
     _x, _y, width, height = region
     if width < _MIN_REGION_SIZE or height < _MIN_REGION_SIZE:
         return (
-            "Search region",
+            "Região de busca",
             "FAIL",
-            f"Region {width}x{height} - set via Screen tab (min {_MIN_REGION_SIZE}px)",
+            f"Região {width}x{height} - configure na aba Tela (mín {_MIN_REGION_SIZE}px)",
         )
     return (
-        "Search region",
+        "Região de busca",
         "PASS",
-        f"{width}x{height} at ({_x}, {_y})",
+        f"{width}x{height} em ({_x}, {_y})",
     )
 
 
@@ -89,9 +89,9 @@ def _check_screen_capture(region):
     try:
         screenshot_cv = grab_region(region)
         h, w = screenshot_cv.shape[:2]
-        return screenshot_cv, ("Screen capture", "PASS", f"Grabbed {w}x{h} BGR frame")
+        return screenshot_cv, ("Captura de tela", "PASS", f"Frame BGR {w}x{h} capturado")
     except Exception as exc:
-        return None, ("Screen capture", "FAIL", str(exc))
+        return None, ("Captura de tela", "FAIL", str(exc))
 
 
 def _check_template_files_only() -> list[Result]:
@@ -99,56 +99,56 @@ def _check_template_files_only() -> list[Result]:
     for label, template_path in _configured_templates():
         path = Path(template_path)
         if path.is_file():
-            results.append((f"Template file ({label})", "PASS", path.name))
+            results.append((f"Arquivo de template ({label})", "PASS", path.name))
         else:
-            results.append((f"Template file ({label})", "FAIL", f"Missing: {path}"))
+            results.append((f"Arquivo de template ({label})", "FAIL", f"Ausente: {path}"))
     return results
 
 
 def _check_template_match(label, screenshot_cv, region, template_path, threshold) -> Result:
     path = Path(template_path)
     if not path.is_file():
-        return (f"Image finder ({label})", "FAIL", f"File missing: {path.name}")
+        return (f"Buscador de imagem ({label})", "FAIL", f"Arquivo ausente: {path.name}")
 
     probe = probe_template(screenshot_cv, region, template_path, threshold)
     if probe["error"]:
-        return (f"Image finder ({label})", "FAIL", probe["error"])
+        return (f"Buscador de imagem ({label})", "FAIL", probe["error"])
 
     score = probe["score"]
     name = path.name
     if probe["found"]:
         cx, cy = probe["center"]
         return (
-            f"Image finder ({label})",
+            f"Buscador de imagem ({label})",
             "PASS",
-            f"{name} score {score:.3f} at ({cx}, {cy})",
+            f"{name} score {score:.3f} em ({cx}, {cy})",
         )
 
     return (
-        f"Image finder ({label})",
+        f"Buscador de imagem ({label})",
         "WARN",
-        f"{name} best score {score:.3f} (threshold {threshold:.2f}) - not visible in region",
+        f"{name} melhor score {score:.3f} (threshold {threshold:.2f}) - não visível na região",
     )
 
 
 def _check_win32_input() -> Result:
     try:
         x, y = win32api.GetCursorPos()
-        return ("Win32 input", "PASS", f"Cursor at ({x}, {y}); clicks not tested")
+        return ("Entrada Win32", "PASS", f"Cursor em ({x}, {y}); cliques não testados")
     except Exception as exc:
-        return ("Win32 input", "FAIL", str(exc))
+        return ("Entrada Win32", "FAIL", str(exc))
 
 
 def _check_stash_steps() -> Result:
     steps = step_entries()
     if not steps:
-        return ("Stash steps", "FAIL", "No steps configured in config.yml")
+        return ("Etapas de stash", "FAIL", "Nenhuma etapa configurada em config.yml")
     names = ", ".join(step["name"] for step in steps)
-    return ("Stash steps", "PASS", names)
+    return ("Etapas de stash", "PASS", names)
 
 
 def _log_summary(results: list[Result]):
     passed = sum(1 for _, status, _ in results if status == "PASS")
     warned = sum(1 for _, status, _ in results if status == "WARN")
     failed = sum(1 for _, status, _ in results if status == "FAIL")
-    info(f"Diagnostics: {passed} pass, {warned} warn, {failed} fail")
+    info(f"Diagnóstico: {passed} ok, {warned} aviso, {failed} falha")

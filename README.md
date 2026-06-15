@@ -1,17 +1,17 @@
 # TBH (Task Bar Hero) Helper
 
-Python helper that finds UI templates on screen and clicks them.
+Assistente em Python que encontra templates de interface na tela e clica neles.
 
-## Support 
+## Suporte
 
 https://saweria.co/goldiegaming | https://ko-fi.com/alandtiwa
 
-## Requirements
+## Requisitos
 
 - Windows
 - Python 3.10+
 
-## Setup
+## Configuração
 
 ```bash
 python -m venv venv
@@ -20,74 +20,74 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## Usage
+## Como usar
 
-1. Open the game and stand near your stash.
-2. In the GUI **Screen** tab, set **UI scale** to match TBH (1, 1.25, 1.5, or 2), then click **Draw search region** and left-drag over your stash UI.
-3. Adjust **Timing** and **Templates** tabs as needed (each field has a short explanation).
-4. On the **Run** tab, choose log level and click **Start Stash**, then focus the game window.
+1. Abra o jogo e fique perto do seu stash.
+2. Na aba **Tela** da interface, configure a **Escala de UI** para corresponder ao TBH (1, 1.25, 1.5 ou 2), depois clique em **Desenhar região de busca** e arraste sobre a interface do seu stash.
+3. Ajuste as abas **Temporização** e **Templates** conforme necessário (cada campo tem uma explicação curta).
+4. Na aba **Executar**, escolha o nível de log e clique em **Iniciar Stash**, depois foque na janela do jogo.
 
-The app loops through these steps:
+O app percorre estas etapas em loop:
 
-1. Open chest — right-clicks boss or normal chest icon (boss checked first)
-2. Auto Fill — waits a **random** delay, then checks for combine
-   - **If combine appears:** clicks combine → back → restarts from step 1
-   - **If not:** continues to Stash All
+1. Abrir baú — clica com o botão direito no ícone de baú boss ou normal (boss verificado primeiro)
+2. Auto Fill — aguarda um intervalo **aleatório**, depois verifica combine
+   - **Se combine aparecer:** clica em combine → voltar → reinicia da etapa 1
+   - **Se não aparecer:** continua para Stash All
 3. Stash All
-4. Close/back
+4. Fechar/voltar
 
-While running, a **background timer** (random interval) tries Stash All → Sort with a random gap between clicks, then presses Space.
+Durante a execução, um **timer em segundo plano** (intervalo aleatório) tenta Stash All → Sort com um intervalo aleatório entre os cliques, depois pressiona Espaço.
 
-### Missing UI / stuck prevention
+### Prevenção de travamento / UI ausente
 
-If a chest icon or step button is not found, the helper **retries** on the loop poll interval (Timing → **Loop retry**) until **Step wait limit** expires (default about 45–60 seconds, random in range). It then **skips to the next step** instead of waiting forever or restarting the whole loop.
+Se um ícone de baú ou botão de etapa não for encontrado, o assistente **tenta novamente** no intervalo de sondagem do loop (Temporização → **Repetição do loop**) até que o **Limite de espera da etapa** expire (padrão de cerca de 45–60 segundos, aleatório no intervalo). Então **pula para a próxima etapa** em vez de aguardar indefinidamente ou reiniciar todo o loop.
 
-| Situation | Behavior |
-|-----------|----------|
-| Chest or step button missing (after step wait limit) | Skip to the next step in the list |
-| Combine prompt missing after Auto Fill | Skip ahead to Stash All (one check, no long wait) |
-| `back_arrow` missing after combine (after step wait limit) | Skip to Stash All |
-| Combine flow completes (combine + back found) | Restarts from open chest |
-| Periodic stash/sort buttons missing | Skips that click for the cycle; continues on the next interval |
+| Situação | Comportamento |
+|----------|---------------|
+| Baú ou botão de etapa ausente (após limite de espera da etapa) | Pula para a próxima etapa da lista |
+| Prompt de combine ausente após Auto Fill | Avança para Stash All (uma verificação, sem longa espera) |
+| `back_arrow` ausente após combine (após limite de espera da etapa) | Pula para Stash All |
+| Fluxo de combine concluído (combine + voltar encontrados) | Reinicia a partir de abrir baú |
+| Botões de stash/sort periódico ausentes | Pula esse clique no ciclo; continua no próximo intervalo |
 
-Status text and logs show `Skipped …, next: …` when a step is skipped.
+O texto de status e os logs mostram `Pulado …, próximo: …` quando uma etapa é pulada.
 
-### Anti-detection randomization
+### Aleatorização anti-detecção
 
-All delays and click positions use **min/max ranges** configured in the GUI (Timing tab):
+Todos os atrasos e posições de clique usam **intervalos mín/máx** configurados na interface (aba Temporização):
 
-- Poll retries while waiting for UI (**Loop retry**)
-- Maximum time to keep waiting for one button or chest icon (**Step wait limit**)
-- Pause after successful clicks or after skipping a step
-- Combine check wait after Auto Fill
-- Periodic stash/sort cycle interval and stash→sort gap
-- Pixel offset from template center on every click
+- Sondagens enquanto aguarda UI (**Repetição do loop**)
+- Tempo máximo para aguardar um botão ou ícone de baú (**Limite de espera da etapa**)
+- Pausa após cliques bem-sucedidos ou após pular uma etapa
+- Espera pela verificação de combine após Auto Fill
+- Intervalo do ciclo de stash/sort periódico e intervalo stash→sort
+- Deslocamento de pixel a partir do centro do template em cada clique
 
-Wider ranges look more human but slow the loop slightly. A shorter step wait limit recovers faster when the UI is wrong or the game state changed; a longer limit avoids skipping during slow animations.
+Intervalos mais amplos parecem mais humanos, mas deixam o loop levemente mais lento. Um limite de espera de etapa menor recupera mais rápido quando a UI está errada ou o estado do jogo mudou; um limite maior evita pular durante animações lentas.
 
-## Configuration
+## Configuração
 
-All settings are edited in the GUI and saved to `resources/config.yml` when you close the app. Template filenames are **base names** (e.g. `auto_fill.png`); scaled assets use suffixes `_1-25`, `_1-50`, or `_2` depending on window scale.
+Todas as configurações são editadas na interface e salvas em `resources/config.yml` quando você fecha o app. Os nomes dos templates são **nomes base** (ex.: `auto_fill.png`); assets escalados usam sufixos `_1-25`, `_1-50` ou `_2` dependendo da escala da janela.
 
-## Architecture
+## Arquitetura
 
-Developer reference for the stash **state machine** (steps, combine branch, skip/restart) and **template matcher** (capture, OpenCV, scale resolution):
+Referência para desenvolvedores sobre a **máquina de estados** do stash (etapas, ramificação combine, pular/reiniciar) e o **comparador de templates** (captura, OpenCV, resolução de escala):
 
 **[docs/automation.md](docs/automation.md)**
 
-## Building an executable
+## Criando um executável
 
-See **[RELEASES.md](RELEASES.md)** for local PyInstaller builds and publishing GitHub releases.
+Veja **[RELEASES.md](RELEASES.md)** para builds locais com PyInstaller e publicação de releases no GitHub.
 
-Quick local build:
+Build local rápido:
 
 ```bash
 pip install pyinstaller
 pyinstaller --name TBHHelper --add-data "resources;resources" --add-data "assets;assets" main.py
 ```
 
-Output: `dist/TBHHelper/TBHHelper.exe`
+Saída: `dist/TBHHelper/TBHHelper.exe`
 
-## Template images
+## Imagens de template
 
-Place template PNGs in `assets/`. Capture small, unique crops at the same resolution and scale you play at.
+Coloque os PNGs dos templates em `assets/`. Capture recortes pequenos e únicos na mesma resolução e escala em que você joga.

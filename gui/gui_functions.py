@@ -12,22 +12,22 @@ _OVERLAY_ALPHA = 0.25
 
 
 def popup_rectangle_window(button, x, y, width, height):
-    """Show current region; click anywhere to close."""
+    """Exibe a região atual; clique em qualquer lugar para fechar."""
     apply_log_level()
-    info("Region preview: opening overlay")
+    info("Prévia da região: abrindo sobreposição")
     window, canvas, bar = _create_overlay()
     window.update_idletasks()
     info(
-        "Region preview: canvas at screen "
+        "Prévia da região: canvas na tela "
         f"({canvas.winfo_rootx()}, {canvas.winfo_rooty()}) "
-        f"size {canvas.winfo_width()}x{canvas.winfo_height()}"
+        f"tamanho {canvas.winfo_width()}x{canvas.winfo_height()}"
     )
     _draw_region_on_canvas(canvas, x.get(), y.get(), width.get(), height.get())
 
     def close(_event=None):
         if _event is not None:
-            debug(f"Region preview: close at ({_event.x_root}, {_event.y_root})")
-        info("Region preview: closed")
+            debug(f"Prévia da região: fechar em ({_event.x_root}, {_event.y_root})")
+        info("Prévia da região: fechada")
         window.destroy()
         button.configure(
             command=partial(popup_rectangle_window, button, x, y, width, height)
@@ -38,15 +38,15 @@ def popup_rectangle_window(button, x, y, width, height):
 
 
 def open_set_region_drag(x, y, width, height):
-    """Fullscreen overlay: left-drag to set search region (screen coordinates)."""
+    """Sobreposição em tela cheia: arraste com esquerdo para definir região de busca (coordenadas de tela)."""
     apply_log_level()
-    info("Region draw: opening overlay (dimmed, captures mouse)")
+    info("Desenho de região: abrindo sobreposição (escurecida, captura o mouse)")
     window, canvas, bar = _create_overlay()
     window.update_idletasks()
     debug(
-        "Region draw: canvas at screen "
+        "Desenho de região: canvas na tela "
         f"({canvas.winfo_rootx()}, {canvas.winfo_rooty()}) "
-        f"size {canvas.winfo_width()}x{canvas.winfo_height()}"
+        f"tamanho {canvas.winfo_width()}x{canvas.winfo_height()}"
     )
     drag = {"rect_id": None, "start_x": None, "start_y": None}
 
@@ -55,27 +55,27 @@ def open_set_region_drag(x, y, width, height):
             canvas, x.get(), y.get(), width.get(), height.get(), outline="#88ff88"
         )
         debug(
-            f"Region draw: showing current region "
+            f"Desenho de região: exibindo região atual "
             f"({x.get()}, {y.get()}) {width.get()}x{height.get()}"
         )
     else:
-        debug("Region draw: no current region to show — drag a new rectangle")
+        debug("Desenho de região: nenhuma região atual — arraste um novo retângulo")
 
     def close(_event=None):
         if _event is not None:
-            debug(f"Region draw: cancel at ({_event.x_root}, {_event.y_root})")
-        info("Region draw: overlay closed")
+            debug(f"Desenho de região: cancelar em ({_event.x_root}, {_event.y_root})")
+        info("Desenho de região: sobreposição fechada")
         window.destroy()
 
     def on_press(event):
         drag["start_x"] = event.x_root
         drag["start_y"] = event.y_root
-        debug(f"Region draw: press at screen ({event.x_root}, {event.y_root})")
+        debug(f"Desenho de região: pressionado na tela ({event.x_root}, {event.y_root})")
         if drag["rect_id"] is not None:
             canvas.delete(drag["rect_id"])
             drag["rect_id"] = None
         cx1, cy1 = _screen_to_canvas(canvas, event.x_root, event.y_root)
-        debug(f"Region draw: press on canvas ({cx1:.0f}, {cy1:.0f})")
+        debug(f"Desenho de região: pressionado no canvas ({cx1:.0f}, {cy1:.0f})")
         drag["rect_id"] = canvas.create_rectangle(
             cx1, cy1, cx1, cy1, outline="lime", width=3
         )
@@ -86,24 +86,24 @@ def open_set_region_drag(x, y, width, height):
         cx1, cy1 = _screen_to_canvas(canvas, drag["start_x"], drag["start_y"])
         cx2, cy2 = _screen_to_canvas(canvas, event.x_root, event.y_root)
         canvas.coords(drag["rect_id"], cx1, cy1, cx2, cy2)
-        debug(f"Region draw: drag to screen ({event.x_root}, {event.y_root})")
+        debug(f"Desenho de região: arrastando para tela ({event.x_root}, {event.y_root})")
 
     def on_release(event):
         if drag["start_x"] is None:
-            warning("Region draw: release without press — ignored")
+            warning("Desenho de região: solto sem pressionar — ignorado")
             return
         left = min(drag["start_x"], event.x_root)
         top = min(drag["start_y"], event.y_root)
         region_width = abs(event.x_root - drag["start_x"])
         region_height = abs(event.y_root - drag["start_y"])
         debug(
-            f"Region draw: release at ({event.x_root}, {event.y_root}) "
+            f"Desenho de região: solto em ({event.x_root}, {event.y_root}) "
             f"→ {region_width}x{region_height} px"
         )
         if region_width < _MIN_REGION_SIZE or region_height < _MIN_REGION_SIZE:
             warning(
-                f"Region draw: too small ({region_width}x{region_height}), "
-                f"need at least {_MIN_REGION_SIZE}px — try again"
+                f"Desenho de região: muito pequeno ({region_width}x{region_height}), "
+                f"mínimo {_MIN_REGION_SIZE}px — tente novamente"
             )
             drag["start_x"] = None
             drag["start_y"] = None
@@ -115,20 +115,20 @@ def open_set_region_drag(x, y, width, height):
         y.set(int(top))
         width.set(int(region_width))
         height.set(int(region_height))
-        debug(f"Region draw: applied ({left}, {top}) {region_width}x{region_height}")
+        debug(f"Desenho de região: aplicado ({left}, {top}) {region_width}x{region_height}")
         close()
 
     _bind_drag(window, canvas, bar, on_press, on_motion, on_release)
     window.bind("<Escape>", close)
-    info("Region draw: ready — left-click and drag on the dimmed screen (Esc to cancel)")
+    info("Desenho de região: pronto — clique esquerdo e arraste na tela escurecida (Esc para cancelar)")
 
 
 def _create_overlay():
     """
-    Semi-transparent fullscreen overlay.
+    Sobreposição semitransparente em tela cheia.
 
-    Avoids -transparentcolor, which on Windows lets clicks pass through to the
-    game/desktop so drag never fires.
+    Evita -transparentcolor, que no Windows deixa os cliques passarem para o
+    jogo/desktop, impedindo o arrastar.
     """
     window = Toplevel()
     window.resizable(False, False)
@@ -141,7 +141,7 @@ def _create_overlay():
     bar.pack(fill="x")
     Label(
         bar,
-        text="Drag with left-click to set search region  •  Esc to cancel",
+        text="Arraste com clique esquerdo para definir região de busca  •  Esc para cancelar",
         fg="#eeeeee",
         bg="#222222",
         font=("Segoe UI", 10),
@@ -174,15 +174,15 @@ def _draw_region_on_canvas(canvas, left, top, width, height, outline="lime"):
     cx1, cy1 = _screen_to_canvas(canvas, left, top)
     cx2, cy2 = _screen_to_canvas(canvas, right, bottom)
     debug(
-        f"Region overlay: draw rect canvas ({cx1:.0f},{cy1:.0f})-({cx2:.0f},{cy2:.0f})"
+        f"Sobreposição de região: retângulo canvas ({cx1:.0f},{cy1:.0f})-({cx2:.0f},{cy2:.0f})"
     )
     return canvas.create_rectangle(cx1, cy1, cx2, cy2, outline=outline, width=3)
 
 
 def on_closing():
     save_data()
-    info("GUI: Saving data")
-    info("GUI: Closing")
+    info("GUI: Salvando dados")
+    info("GUI: Fechando")
     gv.root.destroy()
 
 
@@ -190,7 +190,7 @@ def start_stash(button):
     apply_log_level()
     gv.continue_stash = True
     reset_stash_state()
-    button.configure(text="Stop Stash", command=partial(stop_stash, button))
+    button.configure(text="Parar Stash", command=partial(stop_stash, button))
     stash_loop()
     start_periodic_stash_sort()
 
@@ -201,39 +201,46 @@ _STATUS_COLORS = {
     "FAIL": "#cf222e",
 }
 
+_STATUS_LABELS = {
+    "PASS": "OK",
+    "WARN": "AVISO",
+    "FAIL": "FALHA",
+}
+
 
 def run_diagnostics(button, output_text):
     apply_log_level()
     button.configure(state=DISABLED)
     output_text.configure(state=NORMAL)
     output_text.delete("1.0", END)
-    output_text.insert(END, "Running diagnostics...\n")
+    output_text.insert(END, "Executando diagnóstico...\n")
     output_text.configure(state=DISABLED)
     gv.root.update_idletasks()
 
     try:
         results = execute_diagnostics()
     except Exception as exc:
-        results = [("Diagnostics", "FAIL", str(exc))]
+        results = [("Diagnóstico", "FAIL", str(exc))]
 
     lines = []
     for name, status, detail in results:
-        lines.append(f"[{status}] {name}: {detail}")
+        label = _STATUS_LABELS.get(status, status)
+        lines.append(f"[{label}] {name}: {detail}")
 
     passed = sum(1 for _, status, _ in results if status == "PASS")
     warned = sum(1 for _, status, _ in results if status == "WARN")
     failed = sum(1 for _, status, _ in results if status == "FAIL")
     lines.append("")
-    lines.append(f"Summary: {passed} pass, {warned} warn, {failed} fail")
+    lines.append(f"Resumo: {passed} ok, {warned} aviso, {failed} falha")
 
     output_text.configure(state=NORMAL)
     output_text.delete("1.0", END)
     for line in lines:
-        if line.startswith("[PASS]"):
+        if line.startswith("[OK]"):
             tag = "pass"
-        elif line.startswith("[WARN]"):
+        elif line.startswith("[AVISO]"):
             tag = "warn"
-        elif line.startswith("[FAIL]"):
+        elif line.startswith("[FALHA]"):
             tag = "fail"
         else:
             tag = None
@@ -247,7 +254,7 @@ def run_diagnostics(button, output_text):
     output_text.configure(state=DISABLED)
     button.configure(state=NORMAL)
 
-    summary = f"Diagnostics: {passed} pass, {warned} warn, {failed} fail"
+    summary = f"Diagnóstico: {passed} ok, {warned} aviso, {failed} falha"
     gv.status_message = summary
     if gv.status_label is not None:
         gv.status_label.configure(text=summary)
@@ -256,8 +263,8 @@ def run_diagnostics(button, output_text):
 
 def stop_stash(button):
     gv.continue_stash = False
-    gv.status_message = "Stopped"
-    info("Process Stopped")
+    gv.status_message = "Parado"
+    info("Processo parado")
     if gv.status_label is not None:
         gv.status_label.configure(text=gv.status_message)
-    button.configure(text="Start Stash", command=partial(start_stash, button))
+    button.configure(text="Iniciar Stash", command=partial(start_stash, button))
