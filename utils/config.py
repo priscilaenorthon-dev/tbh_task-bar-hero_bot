@@ -1,10 +1,11 @@
 import random
 from pathlib import Path
-from tkinter import DoubleVar, IntVar, StringVar
+from tkinter import BooleanVar, DoubleVar, IntVar, StringVar
 
 from yaml import dump, safe_load
 
 from utils.global_variables import BASE_DIR, CONFIG_PATH
+from utils.map_data import ALL_MAP_CODES
 
 WINDOW_SCALES = ("1", "1.25", "1.5", "2")
 _SCALE_SUFFIX = {
@@ -86,6 +87,51 @@ def _normalize_config(config):
 
     scale = str(config.get("window_scale", "1"))
     config["window_scale"] = scale if scale in _SCALE_SUFFIX else "1"
+
+    _default_nav_templates = {
+        "difficulty_dropdown": "assets/difficulty_dropdown.png",
+        "normal": "assets/difficulty_normal.png",
+        "nightmare": "assets/difficulty_nightmare.png",
+        "hell": "assets/difficulty_hell.png",
+        "torment": "assets/difficulty_torment.png",
+        "normal_open": "assets/difficulty_normal_open.png",
+        "nightmare_open": "assets/difficulty_nightmare_open.png",
+        "hell_open": "assets/difficulty_hell_open.png",
+        "torment_open": "assets/difficulty_torment_open.png",
+        "act1": "assets/act1.png",
+        "act2": "assets/act2.png",
+        "act3": "assets/act3.png",
+    }
+    if "map_runner" not in config:
+        config["map_runner"] = {
+            "chest_respawn_minutes": 10,
+            "time_per_map": {"min": 45.0, "max": 75.0},
+            "nav_click_delay": {"min": 0.8, "max": 1.4},
+            "difficulty": "hell",
+            "selected_maps": [],
+            "nav_templates": _default_nav_templates,
+        }
+    else:
+        mr = config["map_runner"]
+        if "time_per_map" not in mr:
+            mr["time_per_map"] = {"min": 45.0, "max": 75.0}
+        if "nav_click_delay" not in mr:
+            mr["nav_click_delay"] = {"min": 0.8, "max": 1.4}
+        if "difficulty" not in mr:
+            mr["difficulty"] = "hell"
+        if "selected_maps" not in mr:
+            # Migrate old maps list to selected_maps if present
+            old_maps = mr.pop("maps", [])
+            mr["selected_maps"] = [m["name"] for m in old_maps if isinstance(m.get("name"), str)]
+        mr.pop("maps", None)
+        if "nav_templates" not in mr:
+            mr["nav_templates"] = _default_nav_templates
+        else:
+            for key, default in _default_nav_templates.items():
+                mr["nav_templates"].setdefault(key, default)
+        # Remove legacy fields from previous version
+        mr.pop("nav_next_template", None)
+        mr.pop("nav_prev_template", None)
 
     return config
 
@@ -187,6 +233,28 @@ dict = {
     ],
     "log_lvl": StringVar(value=config.get("log_lvl", "INFO")),
     "window_scale": StringVar(value=config["window_scale"]),
+    "map_runner": {
+        "chest_respawn_minutes": IntVar(value=int(config["map_runner"]["chest_respawn_minutes"])),
+        "time_per_map": {
+            "min": DoubleVar(value=config["map_runner"]["time_per_map"]["min"]),
+            "max": DoubleVar(value=config["map_runner"]["time_per_map"]["max"]),
+        },
+        "nav_click_delay": {
+            "min": DoubleVar(value=config["map_runner"]["nav_click_delay"]["min"]),
+            "max": DoubleVar(value=config["map_runner"]["nav_click_delay"]["max"]),
+        },
+        "difficulty": StringVar(value=config["map_runner"].get("difficulty", "hell")),
+        "click_chest": BooleanVar(value=bool(config["map_runner"].get("click_chest", True))),
+        "click_boss_chest": BooleanVar(value=bool(config["map_runner"].get("click_boss_chest", True))),
+        "selected_maps": {
+            code: BooleanVar(value=(code in config["map_runner"].get("selected_maps", [])))
+            for code in ALL_MAP_CODES
+        },
+        "nav_templates": {
+            key: StringVar(value=val)
+            for key, val in config["map_runner"]["nav_templates"].items()
+        },
+    },
 }
 
 
@@ -314,6 +382,29 @@ def save_data():
         ],
         "log_lvl": dict["log_lvl"].get(),
         "window_scale": dict["window_scale"].get(),
+        "map_runner": {
+            "chest_respawn_minutes": dict["map_runner"]["chest_respawn_minutes"].get(),
+            "time_per_map": {
+                "min": dict["map_runner"]["time_per_map"]["min"].get(),
+                "max": dict["map_runner"]["time_per_map"]["max"].get(),
+            },
+            "nav_click_delay": {
+                "min": dict["map_runner"]["nav_click_delay"]["min"].get(),
+                "max": dict["map_runner"]["nav_click_delay"]["max"].get(),
+            },
+            "difficulty": dict["map_runner"]["difficulty"].get(),
+            "click_chest": dict["map_runner"]["click_chest"].get(),
+            "click_boss_chest": dict["map_runner"]["click_boss_chest"].get(),
+            "selected_maps": [
+                code
+                for code, var in dict["map_runner"]["selected_maps"].items()
+                if var.get()
+            ],
+            "nav_templates": {
+                key: var.get()
+                for key, var in dict["map_runner"]["nav_templates"].items()
+            },
+        },
     }
 
     with open(CONFIG_PATH, "w", encoding="utf-8") as yaml_file:

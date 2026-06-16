@@ -4,8 +4,8 @@ from tkinter import Canvas, Frame, Label, Toplevel, DISABLED, END, NORMAL
 import utils.global_variables as gv
 from functionality.function_tester import run_diagnostics as execute_diagnostics
 from functionality.stash_loop import reset_stash_state, start_periodic_stash_sort, stash_loop
-from utils.config import save_data
-from wrappers.logging_wrapper import apply_log_level, debug, info, warning
+from utils.config import dict as cfg, save_data
+from wrappers.logging_wrapper import apply_log_level, debug, enable_file_logging, info, warning
 
 _MIN_REGION_SIZE = 20
 _OVERLAY_ALPHA = 0.25
@@ -268,3 +268,46 @@ def stop_stash(button):
     if gv.status_label is not None:
         gv.status_label.configure(text=gv.status_message)
     button.configure(text="Iniciar Stash", command=partial(start_stash, button))
+
+
+def start_map_runner(mr_button, stash_button):
+    from functionality.map_runner_loop import map_runner_loop, reset_map_runner_state
+
+    apply_log_level()
+    active_maps = [code for code, var in cfg["map_runner"]["selected_maps"].items() if var.get()]
+    if not active_maps:
+        warning("Map Runner: selecione pelo menos um mapa antes de iniciar")
+        gv.mr_status_message = "Erro: nenhum mapa selecionado"
+        if gv.mr_status_label is not None:
+            gv.mr_status_label.configure(text=gv.mr_status_message)
+        return
+
+    gv.continue_map_runner = True
+    reset_map_runner_state()
+
+    log_path = enable_file_logging()
+    info(f"Map Runner: log em arquivo → {log_path}")
+
+    if stash_button is not None:
+        stash_button.configure(state=DISABLED)
+    mr_button.configure(
+        text="Parar Caça ao Baú",
+        command=partial(stop_map_runner, mr_button, stash_button),
+    )
+    info("Map Runner: iniciado")
+    map_runner_loop()
+
+
+def stop_map_runner(mr_button, stash_button):
+    gv.continue_map_runner = False
+    gv.continue_stash = False
+    gv.mr_status_message = "Parado"
+    info("Map Runner: parado")
+    if gv.mr_status_label is not None:
+        gv.mr_status_label.configure(text=gv.mr_status_message)
+    if stash_button is not None:
+        stash_button.configure(state=NORMAL)
+    mr_button.configure(
+        text="Iniciar Caça ao Baú",
+        command=partial(start_map_runner, mr_button, stash_button),
+    )

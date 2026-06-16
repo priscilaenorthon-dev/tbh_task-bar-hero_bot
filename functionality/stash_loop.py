@@ -96,8 +96,20 @@ def stash_loop():
     gv.root.after(delay_ms, stash_loop)
 
 
+def _active_chest_entries():
+    entries = chest_check_entries()
+    if not gv.continue_map_runner:
+        return entries
+    click_chest = dict["map_runner"]["click_chest"].get()
+    click_boss = dict["map_runner"]["click_boss_chest"].get()
+    return [e for e in entries if
+            (e["name"] == "boss_chest" and click_boss) or
+            (e["name"] == "chest" and click_chest) or
+            (e["name"] not in ("boss_chest", "chest"))]
+
+
 def _handle_open_chest_step(region, threshold):
-    for chest in chest_check_entries():
+    for chest in _active_chest_entries():
         match = find_template(region, chest["template"], threshold)
         if match is None:
             continue

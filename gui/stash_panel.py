@@ -1,9 +1,10 @@
 from functools import partial
-from tkinter import Button, Canvas, DISABLED, Entry, Frame, Label, Scrollbar, Text, ttk
+from tkinter import BooleanVar, Button, Canvas, Checkbutton, DISABLED, Entry, Frame, IntVar, Label, Scrollbar, StringVar, Text, ttk
 
 import utils.global_variables as gv
-from gui.gui_functions import open_set_region_drag, popup_rectangle_window, run_diagnostics, start_stash
+from gui.gui_functions import open_set_region_drag, popup_rectangle_window, run_diagnostics, start_map_runner, start_stash
 from utils.config import WINDOW_SCALES, dict
+from utils.map_data import ACT1, ACT2, ACT3, map_label
 
 _HELP_FONT = ("Segoe UI", 8)
 _SECTION_FONT = ("Segoe UI", 10, "bold")
@@ -20,6 +21,7 @@ def stash_panel():
     _screen_tab(notebook)
     _timing_tab(notebook)
     _control_tab(notebook)
+    _map_runner_tab(notebook)
 
     footer = Frame(outer)
     footer.pack(fill="x", side="bottom", pady=(8, 0))
@@ -32,10 +34,13 @@ def stash_panel():
         font=_LABEL_FONT,
     )
     gv.status_label.pack(fill="x", pady=(0, 6))
+    gv.mr_status_label = gv.status_label
 
-    start_button = Button(footer, text="Iniciar Stash", width=24)
-    start_button.configure(command=partial(start_stash, start_button))
-    start_button.pack(fill="x")
+    start_button = None
+
+    mr_button = Button(footer, text="Iniciar Caça ao Baú", width=24)
+    mr_button.configure(command=partial(start_map_runner, mr_button, start_button))
+    mr_button.pack(fill="x")
 
 
 def _scrollable_tab(notebook, title):
@@ -278,6 +283,64 @@ def _control_tab(notebook):
         "(coloque a UI do jogo na região). Configure o nível de log para DEBUG para ver scores por template "
         "no console. Nenhum clique é realizado.",
     )
+
+
+def _map_runner_tab(notebook):
+    _DIFFICULTIES = ("normal", "nightmare", "hell", "torment")
+
+    panel = _scrollable_tab(notebook, "Caça ao Baú")
+    row = 0
+
+    row = _section(panel, row, "Baús a coletar")
+    Checkbutton(
+        panel, text="Baú marrom (chest)", variable=dict["map_runner"]["click_chest"], font=_LABEL_FONT
+    ).grid(row=row, column=0, columnspan=2, sticky="w")
+    row += 1
+    Checkbutton(
+        panel, text="Baú azul chefe (boss chest)", variable=dict["map_runner"]["click_boss_chest"], font=_LABEL_FONT
+    ).grid(row=row, column=0, columnspan=2, sticky="w")
+    row += 1
+
+    row = _section(panel, row, "Dificuldade")
+    Label(panel, text="Dificuldade", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
+    ttk.Combobox(
+        panel,
+        textvariable=dict["map_runner"]["difficulty"],
+        values=_DIFFICULTIES,
+        state="readonly",
+        width=12,
+    ).grid(row=row, column=1, sticky="w", padx=(8, 0))
+    row += 1
+    row = _help(panel, row, "Dificuldade usada ao navegar para todos os mapas selecionados.")
+
+    acts_frame = Frame(panel)
+    acts_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(4, 8))
+    row += 1
+
+    for col, (act_label, act_codes) in enumerate([("Act 1", ACT1), ("Act 2", ACT2), ("Act 3", ACT3)]):
+        col_frame = Frame(acts_frame, padx=8)
+        col_frame.grid(row=0, column=col, sticky="nw")
+        Label(col_frame, text=act_label, font=_SECTION_FONT).pack(anchor="w", pady=(0, 4))
+        for code in act_codes:
+            var = dict["map_runner"]["selected_maps"][code]
+            Checkbutton(col_frame, text=map_label(code), variable=var, font=_LABEL_FONT, anchor="w").pack(anchor="w")
+
+    row = _section(panel, row, "Temporizador de respawn")
+    Label(panel, text="Respawn do baú (min)", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
+    Entry(panel, textvariable=dict["map_runner"]["chest_respawn_minutes"], width=8).grid(
+        row=row, column=1, sticky="w", padx=(8, 0)
+    )
+    row += 1
+    row = _help(panel, row, "Minutos para o baú reaparecer (mesmo valor para todos os mapas).")
+
+    row = _section(panel, row, "Tempo por mapa")
+    row = _seconds_range_row(panel, row, "Duração por mapa", dict["map_runner"]["time_per_map"])
+    row = _help(panel, row, "Tempo aleatório (segundos) coletando em cada mapa antes de avançar.")
+
+    row = _section(panel, row, "Velocidade de navegação")
+    row = _seconds_range_row(panel, row, "Delay entre cliques", dict["map_runner"]["nav_click_delay"])
+    row = _help(panel, row, "Pausa entre cada clique de navegação (dropdown → dificuldade → Act → nó do mapa).")
+
 
 
 def _section(parent, row, title):

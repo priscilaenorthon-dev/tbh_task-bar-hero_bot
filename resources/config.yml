@@ -1,20 +1,20 @@
 search_region:
-  x: 0
-  y: 829
-  width: 978
-  height: 610
+  x: 1370
+  y: 76
+  width: 1288
+  height: 1260
 matching:
   threshold: 0.7
 timeouts:
   loop:
     min: 1.2
     max: 1.8
-  step_wait:
-    min: 10.0
-    max: 30.0
   after_click:
     min: 0.5
     max: 1.0
+  step_wait:
+    min: 10.0
+    max: 30.0
 combine_flow:
   wait:
     min: 2.5
@@ -48,5 +48,31 @@ steps:
   template: assets/stash_all.png
 - name: close_stash
   template: assets/back_arrow.png
-log_lvl: INFO
-window_scale: '1'
+log_lvl: ERROR
+window_scale: '2'
+map_runner:
+  chest_respawn_minutes: 10
+  time_per_map:
+    min: 45.0
+    max: 75.0
+  nav_click_delay:
+    min: 0.8
+    max: 1.4
+  difficulty: hell
+  click_chest: false
+  click_boss_chest: false
+  selected_maps:
+  - 2-2
+  nav_templates:
+    difficulty_dropdown: assets/difficulty_dropdown.png
+    normal: assets/difficulty_normal.png
+    nightmare: assets/difficulty_nightmare.png
+    hell: assets/difficulty_hell.png
+    torment: assets/difficulty_torment.png
+    normal_open: assets/difficulty_normal_open.png
+    nightmare_open: assets/difficulty_nightmare_open.png
+    hell_open: assets/difficulty_hell_open.png
+    torment_open: assets/difficulty_torment_open.png
+    act1: assets/act1.png
+    act2: assets/act2.png
+    act3: assets/act3.png
