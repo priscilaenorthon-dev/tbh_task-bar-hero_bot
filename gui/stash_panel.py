@@ -400,18 +400,27 @@ def _map_runner_tab(notebook):
         panel, text="Baú azul chefe (boss chest)", variable=dict["map_runner"]["click_boss_chest"], font=_LABEL_FONT
     ).grid(row=row, column=0, columnspan=2, sticky="w")
     row += 1
-
-    row = _section(panel, row, "Dificuldade")
-    Label(panel, text="Dificuldade", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
-    ttk.Combobox(
+    Checkbutton(
         panel,
-        textvariable=dict["map_runner"]["difficulty"],
-        values=_DIFFICULTIES,
-        state="readonly",
-        width=12,
-    ).grid(row=row, column=1, sticky="w", padx=(8, 0))
+        text="Fazer Auto Fill + Stash após abrir baú azul",
+        variable=dict["map_runner"]["do_stash_after_chest"],
+        font=_LABEL_FONT,
+    ).grid(row=row, column=0, columnspan=2, sticky="w", padx=(20, 0))
     row += 1
-    row = _help(panel, row, "Dificuldade usada ao navegar para todos os mapas selecionados.")
+    row = _help(
+        panel,
+        row,
+        "Marcado: após encontrar o baú azul, faz Auto Fill e Stash antes de ir ao próximo mapa. "
+        "Desmarcado: apenas coleta o baú e avança para o próximo mapa.",
+    )
+
+    row = _section(panel, row, "Mapas e dificuldade por mapa")
+    row = _help(
+        panel,
+        row,
+        "Selecione os mapas da rota e a dificuldade de cada um individualmente. "
+        "O bot visitará os mapas marcados em ordem repetida.",
+    )
 
     acts_frame = Frame(panel)
     acts_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(4, 8))
@@ -420,10 +429,22 @@ def _map_runner_tab(notebook):
     for col, (act_label, act_codes) in enumerate([("Act 1", ACT1), ("Act 2", ACT2), ("Act 3", ACT3)]):
         col_frame = Frame(acts_frame, padx=8)
         col_frame.grid(row=0, column=col, sticky="nw")
-        Label(col_frame, text=act_label, font=_SECTION_FONT).pack(anchor="w", pady=(0, 4))
-        for code in act_codes:
-            var = dict["map_runner"]["selected_maps"][code]
-            Checkbutton(col_frame, text=map_label(code), variable=var, font=_LABEL_FONT, anchor="w").pack(anchor="w")
+        Label(col_frame, text=act_label, font=_SECTION_FONT).grid(
+            row=0, column=0, columnspan=2, sticky="w", pady=(0, 4)
+        )
+        for map_row, code in enumerate(act_codes, start=1):
+            map_var = dict["map_runner"]["selected_maps"][code]
+            diff_var = dict["map_runner"]["map_difficulties"][code]
+            Checkbutton(
+                col_frame, text=map_label(code), variable=map_var, font=_LABEL_FONT, anchor="w"
+            ).grid(row=map_row, column=0, sticky="w")
+            ttk.Combobox(
+                col_frame,
+                textvariable=diff_var,
+                values=_DIFFICULTIES,
+                state="readonly",
+                width=9,
+            ).grid(row=map_row, column=1, sticky="w", padx=(6, 0))
 
     row = _section(panel, row, "Temporizador de respawn")
     Label(panel, text="Respawn do baú (min)", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
