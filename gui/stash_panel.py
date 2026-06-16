@@ -2,13 +2,18 @@ from functools import partial
 from tkinter import BooleanVar, Button, Canvas, Checkbutton, DISABLED, Entry, Frame, IntVar, Label, Scrollbar, StringVar, Text, ttk
 
 import utils.global_variables as gv
-from gui.gui_functions import open_set_region_drag, popup_rectangle_window, run_diagnostics, start_map_runner, start_stash
+from gui.gui_functions import open_logs_folder, open_set_region_drag, pause_stash, popup_rectangle_window, run_diagnostics, start_map_runner, start_stash
 from utils.config import WINDOW_SCALES, dict
 from utils.map_data import ACT1, ACT2, ACT3, map_label
 
 _HELP_FONT = ("Segoe UI", 8)
 _SECTION_FONT = ("Segoe UI", 10, "bold")
 _LABEL_FONT = ("Segoe UI", 9)
+
+_BTN_START_BG = "#2da44e"
+_BTN_START_ACTIVE = "#218838"
+_BTN_STOP_BG = "#cf222e"
+_BTN_STOP_ACTIVE = "#b91c1c"
 
 
 def stash_panel():
@@ -29,17 +34,51 @@ def stash_panel():
     gv.status_label = Label(
         footer,
         text=gv.status_message,
-        wraplength=460,
+        wraplength=640,
         justify="left",
         font=_LABEL_FONT,
     )
-    gv.status_label.pack(fill="x", pady=(0, 6))
+    gv.status_label.pack(fill="x", pady=(0, 4))
     gv.mr_status_label = gv.status_label
 
-    start_button = None
+    # Stash start/stop + pause row
+    stash_row = Frame(footer)
+    stash_row.pack(fill="x", pady=(0, 4))
 
-    mr_button = Button(footer, text="Iniciar Caça ao Baú", width=24)
-    mr_button.configure(command=partial(start_map_runner, mr_button, start_button))
+    stash_btn = Button(
+        stash_row,
+        text="Iniciar Stash",
+        font=("Segoe UI", 10, "bold"),
+        bg=_BTN_START_BG,
+        fg="white",
+        activebackground=_BTN_START_ACTIVE,
+        activeforeground="white",
+        relief="flat",
+        pady=6,
+    )
+    stash_btn.configure(command=partial(start_stash, stash_btn))
+    stash_btn.pack(side="left", fill="x", expand=True, padx=(0, 4))
+
+    pause_btn = Button(
+        stash_row,
+        text="Pausar",
+        font=("Segoe UI", 9),
+        relief="flat",
+        pady=6,
+        width=10,
+    )
+    pause_btn.configure(command=partial(pause_stash, pause_btn))
+    pause_btn.pack(side="right")
+
+    # Map Runner button
+    mr_button = Button(
+        footer,
+        text="Iniciar Caça ao Baú",
+        font=("Segoe UI", 10, "bold"),
+        relief="flat",
+        pady=6,
+    )
+    mr_button.configure(command=partial(start_map_runner, mr_button, stash_btn))
     mr_button.pack(fill="x")
 
 
@@ -49,7 +88,7 @@ def _scrollable_tab(notebook, title):
 
     canvas = Canvas(tab, highlightthickness=0)
     scrollbar = Scrollbar(tab, orient="vertical", command=canvas.yview)
-    inner = Frame(canvas)
+    inner = Frame(canvas, padx=6, pady=4)
 
     inner.bind(
         "<Configure>",
@@ -223,10 +262,10 @@ def _timing_tab(notebook):
 
 
 def _control_tab(notebook):
-    panel = Frame(notebook, padx=10, pady=10)
-    notebook.add(panel, text="Executar")
-
+    panel = _scrollable_tab(notebook, "Executar")
     row = 0
+
+    # Log level
     row = _section(panel, row, "Registro de log")
     log_values = ("DEBUG", "INFO", "WARNING", "ERROR")
     Label(panel, text="Nível de log", font=_LABEL_FONT).grid(row=row, column=0, sticky="w")
@@ -243,23 +282,85 @@ def _control_tab(notebook):
         panel,
         row,
         "Detalhe do console enquanto o bot roda. DEBUG mostra o score de cada template; INFO é recomendado. "
-        "Aplicado quando você clica em Iniciar Stash (botão abaixo das abas).",
-    )
-    row = _help(
-        panel,
-        row,
-        "Todas as configurações são lidas em tempo real enquanto o bot roda. "
-        "A configuração é salva em resources/config.yml quando você fecha o app.",
+        "Aplicado quando você clica em Iniciar Stash.",
     )
 
+    # Chest counters
+    row = _section(panel, row, "Contadores de baús (sessão atual)")
+    counter_frame = Frame(panel)
+    counter_frame.grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 6))
+
+    Label(counter_frame, text="Marrom:", font=_LABEL_FONT).pack(side="left")
+    gv.lbl_chest_count = Label(
+        counter_frame, text="0", font=("Segoe UI", 11, "bold"), fg="#8B4513"
+    )
+    gv.lbl_chest_count.pack(side="left", padx=(4, 16))
+
+    Label(counter_frame, text="Boss (azul):", font=_LABEL_FONT).pack(side="left")
+    gv.lbl_boss_chest_count = Label(
+        counter_frame, text="0", font=("Segoe UI", 11, "bold"), fg="#1565C0"
+    )
+    gv.lbl_boss_chest_count.pack(side="left", padx=(4, 16))
+
+    Label(counter_frame, text="Total:", font=_LABEL_FONT).pack(side="left")
+    gv.lbl_total_count = Label(
+        counter_frame, text="0", font=("Segoe UI", 11, "bold")
+    )
+    gv.lbl_total_count.pack(side="left", padx=(4, 0))
+    row += 1
+
+    # Activity log
+    row = _section(panel, row, "Atividade recente")
+    act_frame = Frame(panel)
+    act_frame.grid(row=row, column=0, columnspan=2, sticky="nsew", pady=(0, 4))
+    act_scroll = Scrollbar(act_frame, orient="vertical")
+    act_text = Text(
+        act_frame,
+        height=6,
+        width=60,
+        font=("Consolas", 8),
+        yscrollcommand=act_scroll.set,
+        state=DISABLED,
+        wrap="word",
+        bg="#f5f5f5",
+        relief="flat",
+        borderwidth=1,
+    )
+    act_scroll.config(command=act_text.yview)
+    act_text.pack(side="left", fill="both", expand=True)
+    act_scroll.pack(side="right", fill="y")
+    gv.activity_log_widget = act_text
+    row += 1
+
+    # Log file path + open folder button
+    log_path_frame = Frame(panel)
+    log_path_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+    gv.lbl_log_path = Label(
+        log_path_frame,
+        text="Log: (não iniciado)",
+        font=_HELP_FONT,
+        fg="#555555",
+        anchor="w",
+    )
+    gv.lbl_log_path.pack(side="left", fill="x", expand=True)
+    Button(
+        log_path_frame,
+        text="Abrir pasta de logs",
+        font=_HELP_FONT,
+        command=open_logs_folder,
+        relief="flat",
+    ).pack(side="right")
+    row += 1
+
+    # Diagnostics
     row = _section(panel, row, "Diagnóstico")
     diag_frame = Frame(panel)
     diag_frame.grid(row=row, column=0, columnspan=2, sticky="nsew", pady=(4, 4))
     diag_scroll = Scrollbar(diag_frame, orient="vertical")
     diag_text = Text(
         diag_frame,
-        height=12,
-        width=52,
+        height=9,
+        width=60,
         font=("Consolas", 9),
         yscrollcommand=diag_scroll.set,
         state=DISABLED,
@@ -280,8 +381,7 @@ def _control_tab(notebook):
         row,
         "Verifica região de busca, captura de tela, arquivos de template e scores do buscador de imagem "
         "para cada template configurado. AVISO significa que a busca rodou mas nada foi encontrado "
-        "(coloque a UI do jogo na região). Configure o nível de log para DEBUG para ver scores por template "
-        "no console. Nenhum clique é realizado.",
+        "(coloque a UI do jogo na região). Nenhum clique é realizado.",
     )
 
 
@@ -342,7 +442,6 @@ def _map_runner_tab(notebook):
     row = _help(panel, row, "Pausa entre cada clique de navegação (dropdown → dificuldade → Act → nó do mapa).")
 
 
-
 def _section(parent, row, title):
     Label(parent, text=title, font=_SECTION_FONT).grid(
         row=row, column=0, columnspan=2, sticky="w", pady=(10, 4)
@@ -356,7 +455,7 @@ def _help(parent, row, text):
         text=text,
         font=_HELP_FONT,
         fg="#555555",
-        wraplength=440,
+        wraplength=600,
         justify="left",
     ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 6))
     return row + 1

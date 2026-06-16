@@ -1,4 +1,7 @@
+import random
 import time
+from datetime import datetime
+from tkinter import DISABLED, END, NORMAL
 
 import utils.global_variables as gv
 from functionality.image_search import find_template
@@ -52,6 +55,15 @@ def stash_loop():
     if not gv.continue_stash:
         gv.status_message = "Stopped"
         _update_status_label()
+        return
+
+    if gv.stash_paused:
+        gv.root.after(500, stash_loop)
+        return
+
+    # 12% chance of a brief hesitation at step transitions to simulate human behaviour
+    if gv.step_wait_deadline is None and random.random() < 0.12:
+        gv.root.after(random.randint(150, 600), stash_loop)
         return
 
     steps = _steps()
@@ -120,6 +132,14 @@ def _handle_open_chest_step(region, threshold):
         )
         _clear_step_wait_deadline()
         _right_click_at(center_x, center_y)
+
+        # Increment session counters
+        if chest["name"] == "boss_chest":
+            gv.session_boss_chest_count += 1
+        else:
+            gv.session_chest_count += 1
+        _update_chest_labels()
+
         _advance_to_next_step("open_chest")
         delay_ms = random_delay_ms(dict["timeouts"]["after_click"])
         gv.root.after(delay_ms, stash_loop)
@@ -265,6 +285,10 @@ def periodic_stash_sort_loop():
     if not gv.continue_stash:
         return
 
+    if gv.stash_paused:
+        gv.root.after(500, periodic_stash_sort_loop)
+        return
+
     region = _search_region()
     threshold = dict["matching"]["threshold"].get()
     stash_template = template_path_for(dict["periodic_stash_sort"]["stash_template"])
@@ -312,3 +336,24 @@ def _periodic_finish_cycle():
 def _update_status_label():
     if gv.status_label is not None:
         gv.status_label.configure(text=gv.status_message)
+    _append_activity_log(gv.status_message)
+
+
+def _append_activity_log(message):
+    if gv.activity_log_widget is None:
+        return
+    ts = datetime.now().strftime("%H:%M:%S")
+    gv.activity_log_widget.configure(state=NORMAL)
+    gv.activity_log_widget.insert(END, f"[{ts}] {message}\n")
+    gv.activity_log_widget.see(END)
+    gv.activity_log_widget.configure(state=DISABLED)
+
+
+def _update_chest_labels():
+    total = gv.session_chest_count + gv.session_boss_chest_count
+    if gv.lbl_chest_count is not None:
+        gv.lbl_chest_count.configure(text=str(gv.session_chest_count))
+    if gv.lbl_boss_chest_count is not None:
+        gv.lbl_boss_chest_count.configure(text=str(gv.session_boss_chest_count))
+    if gv.lbl_total_count is not None:
+        gv.lbl_total_count.configure(text=str(total))

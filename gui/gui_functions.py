@@ -1,4 +1,6 @@
+import os
 from functools import partial
+from pathlib import Path
 from tkinter import Canvas, Frame, Label, Toplevel, DISABLED, END, NORMAL
 
 import utils.global_variables as gv
@@ -9,6 +11,11 @@ from wrappers.logging_wrapper import apply_log_level, debug, enable_file_logging
 
 _MIN_REGION_SIZE = 20
 _OVERLAY_ALPHA = 0.25
+
+_BTN_START_BG = "#2da44e"
+_BTN_START_ACTIVE = "#218838"
+_BTN_STOP_BG = "#cf222e"
+_BTN_STOP_ACTIVE = "#b91c1c"
 
 
 def popup_rectangle_window(button, x, y, width, height):
@@ -186,13 +193,80 @@ def on_closing():
     gv.root.destroy()
 
 
+def _update_counter_labels():
+    total = gv.session_chest_count + gv.session_boss_chest_count
+    if gv.lbl_chest_count is not None:
+        gv.lbl_chest_count.configure(text=str(gv.session_chest_count))
+    if gv.lbl_boss_chest_count is not None:
+        gv.lbl_boss_chest_count.configure(text=str(gv.session_boss_chest_count))
+    if gv.lbl_total_count is not None:
+        gv.lbl_total_count.configure(text=str(total))
+
+
 def start_stash(button):
     apply_log_level()
     gv.continue_stash = True
+    gv.stash_paused = False
+
+    # Reset session counters
+    gv.session_chest_count = 0
+    gv.session_boss_chest_count = 0
+    gv.chests_per_map = {}
+    _update_counter_labels()
+
+    # Enable file logging for this session
+    log_path = enable_file_logging(prefix="stash")
+    info(f"Stash: log em arquivo → {log_path}")
+    if gv.lbl_log_path is not None:
+        gv.lbl_log_path.configure(text=f"Log: {Path(log_path).name}")
+
     reset_stash_state()
-    button.configure(text="Parar Stash", command=partial(stop_stash, button))
+    button.configure(
+        text="Parar Stash",
+        bg=_BTN_STOP_BG,
+        activebackground=_BTN_STOP_ACTIVE,
+        command=partial(stop_stash, button),
+    )
     stash_loop()
     start_periodic_stash_sort()
+
+
+def stop_stash(button):
+    gv.continue_stash = False
+    gv.stash_paused = False
+    gv.status_message = "Parado"
+    info("Processo parado")
+    if gv.status_label is not None:
+        gv.status_label.configure(text=gv.status_message)
+    button.configure(
+        text="Iniciar Stash",
+        bg=_BTN_START_BG,
+        activebackground=_BTN_START_ACTIVE,
+        command=partial(start_stash, button),
+    )
+
+
+def pause_stash(pause_btn):
+    if not gv.continue_stash:
+        return
+    if gv.stash_paused:
+        gv.stash_paused = False
+        gv.status_message = "Retomando..."
+        if gv.status_label is not None:
+            gv.status_label.configure(text=gv.status_message)
+        pause_btn.configure(text="Pausar")
+    else:
+        gv.stash_paused = True
+        gv.status_message = "Pausado"
+        if gv.status_label is not None:
+            gv.status_label.configure(text=gv.status_message)
+        pause_btn.configure(text="Retomar")
+
+
+def open_logs_folder():
+    logs_dir = gv.BASE_DIR / "logs"
+    logs_dir.mkdir(exist_ok=True)
+    os.startfile(str(logs_dir))
 
 
 _STATUS_COLORS = {
@@ -261,15 +335,6 @@ def run_diagnostics(button, output_text):
     info(summary)
 
 
-def stop_stash(button):
-    gv.continue_stash = False
-    gv.status_message = "Parado"
-    info("Processo parado")
-    if gv.status_label is not None:
-        gv.status_label.configure(text=gv.status_message)
-    button.configure(text="Iniciar Stash", command=partial(start_stash, button))
-
-
 def start_map_runner(mr_button, stash_button):
     from functionality.map_runner_loop import map_runner_loop, reset_map_runner_state
 
@@ -285,8 +350,10 @@ def start_map_runner(mr_button, stash_button):
     gv.continue_map_runner = True
     reset_map_runner_state()
 
-    log_path = enable_file_logging()
+    log_path = enable_file_logging(prefix="map_runner")
     info(f"Map Runner: log em arquivo → {log_path}")
+    if gv.lbl_log_path is not None:
+        gv.lbl_log_path.configure(text=f"Log: {Path(log_path).name}")
 
     if stash_button is not None:
         stash_button.configure(state=DISABLED)
