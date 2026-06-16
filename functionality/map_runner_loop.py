@@ -1,3 +1,4 @@
+import random
 import time
 from pathlib import Path
 
@@ -7,7 +8,7 @@ from functionality.stash_loop import reset_stash_state, start_periodic_stash_sor
 from utils.config import dict as cfg, random_click_offset, random_delay_ms, random_timeout, template_path_for
 from utils.map_data import act_of, map_label, template_for
 from wrappers.logging_wrapper import debug, info, warning
-from wrappers.win32api_wrapper import click_mouse_with_coordinates, scroll_at
+from wrappers.win32api_wrapper import click_mouse_with_coordinates, right_click_mouse_with_coordinates, scroll_at
 
 _ACT_KEYS = {"1": "act1", "2": "act2", "3": "act3"}
 _MAX_SCROLL_ATTEMPTS = 14
@@ -16,6 +17,8 @@ _SCROLL_UP   =  120
 # Stages com número ≤ 5 ficam no terço inferior do mapa (scroll down),
 # stages ≥ 6 ficam no terço superior (scroll up).
 _SCROLL_BOTTOM_STAGES = {1, 2, 3, 4, 5}
+# Tempo máximo (ms) aguardando o ciclo de stash após clicar no baú azul
+_STASH_AFTER_CHEST_MS = 18_000
 
 
 def _scroll_delta_for(code: str) -> int:
@@ -71,29 +74,27 @@ def _navigate_phase():
 
 
 def _click_difficulty_dropdown(code, phase=0, attempt=0):
-    """Seleciona a dificuldade correta no portal.
+    """Seleciona a dificuldade correta no portal (por mapa).
 
     Fase 0: verifica se a dificuldade já está correta (botão fechado visível).
     Fase 1: dropdown foi aberto — procura a opção alvo para clicar.
-            Não clica no dropdown novamente para evitar loop abrir/fechar.
     """
     if not gv.continue_map_runner:
         return
 
-    difficulty = cfg["map_runner"]["difficulty"].get().lower()
-    template_key = difficulty if difficulty in ("normal", "nightmare", "hell", "torment") else "hell"
+    # Lê a dificuldade específica deste mapa
+    diff_var = cfg["map_runner"]["map_difficulties"].get(code)
+    difficulty = diff_var.get().lower() if diff_var is not None else "normal"
+    template_key = difficulty if difficulty in ("normal", "nightmare", "hell", "torment") else "normal"
     _MAX_ATTEMPTS = 8
 
     def _proceed():
         gv.root.after(random_delay_ms(cfg["map_runner"]["nav_click_delay"]),
                       lambda: _click_act_tab(code))
 
-    # Botão de dificuldade fica em region y≈163 — usar altura mínima de 220px
     diff_region = _header_region(220)
-    # Dropdown aberto mostra lista abaixo do botão
     open_region = _header_region(420)
     threshold = cfg["matching"]["threshold"].get()
-    # Limiar mínimo para dificuldade — templates são parecidos, exige match mais alto
     diff_threshold = max(0.82, threshold)
 
     # ── Fase 0: verificar se já está na dificuldade correta ──────────────────
@@ -110,11 +111,8 @@ def _click_difficulty_dropdown(code, phase=0, attempt=0):
             _proceed()
             return
 
-        # Não está correta → acha o botão testando TODOS os templates de dificuldade.
-        # O botão mostra a dificuldade atual; qual template der maior score indica
-        # a posição do botão mesmo que não seja o template certo.
         _DIFF_KEYS = ("normal", "nightmare", "hell", "torment", "difficulty_dropdown")
-        _FIND_THRESHOLD = 0.65  # limiar baixo só para localizar o botão
+        _FIND_THRESHOLD = 0.65
         best_match = None
         best_score = 0.0
         for _key in _DIFF_KEYS:
@@ -142,7 +140,6 @@ def _click_difficulty_dropdown(code, phase=0, attempt=0):
         return
 
     # ── Fase 1: dropdown aberto — procura a opção alvo ───────────────────────
-    # Na primeira tentativa, salva screenshot para diagnóstico
     if attempt == 0:
         _save_debug_screenshot("dropdown_open")
 
@@ -155,12 +152,11 @@ def _click_difficulty_dropdown(code, phase=0, attempt=0):
             ox, oy = random_click_offset()
             click_mouse_with_coordinates(cx + ox, cy + oy)
             info(f"Map Runner: dificuldade '{difficulty}' clicada (aberto) em ({cx},{cy}) score={score:.3f}")
-            # Aguarda o dropdown fechar e confirma na fase 0
             gv.root.after(random_delay_ms(cfg["map_runner"]["nav_click_delay"]),
                           lambda: _click_difficulty_dropdown(code, phase=0))
             return
     except FileNotFoundError:
-        debug(f"Map Runner: template '{open_key}' não encontrado — execute tools/extract_open_dropdown_templates.py")
+        debug(f"Map Runner: template '{open_key}' não encontrado")
 
     if attempt >= _MAX_ATTEMPTS:
         warning(f"Map Runner: opção '{difficulty}' não encontrada no seletor — continuando assim mesmo")
@@ -172,42 +168,27 @@ def _click_difficulty_dropdown(code, phase=0, attempt=0):
                   lambda: _click_difficulty_dropdown(code, phase=1, attempt=attempt + 1))
 
 
-_ACT_TAB_SPACING = 140  # pixels entre centros das abas (Act1→Act2→Act3)
+_ACT_TAB_SPACING = 140
 _MAX_TAB_ATTEMPTS = 6
 
 
 def _click_act_tab(code, attempt=0):
-    """Navega para a aba do Act correto.
-
-    Os templates das abas mostram o estado ATIVO (selecionado).
-    Estratégia:
-      1. Procura a aba alvo ativa  → já estamos no Act certo → vai para o nó.
-      2. Procura qualquer outra aba ativa → calcula offset e clica na aba alvo.
-      3. Após N tentativas sem encontrar nada → assume Act correto e continua.
-    """
+    """Navega para a aba do Act correto."""
     if not gv.continue_map_runner:
         return
 
     act = act_of(code)
     target_num = int(act)
-    # Abas Act ficam na mesma faixa horizontal do botão de dificuldade (region x≈794).
-    # Usar largura completa mas restringir altura a 300px para não entrar no mapa.
     tab_region = _header_region(300)
-    # Threshold mais permissivo para abas: o Act ativo sempre pontua maior que os outros,
-    # então o "melhor score" já filtra corretamente sem precisar de limiar alto.
     threshold = min(0.55, cfg["matching"]["threshold"].get())
 
     def _go_to_node():
         gv.root.after(random_delay_ms(cfg["map_runner"]["nav_click_delay"]),
                       lambda: _find_map_node(code, scroll_attempts=0))
 
-    # Salva screenshot da região de busca na primeira tentativa para diagnóstico
     if attempt == 0:
         _save_debug_screenshot("act_tab_region")
 
-    # Procura todos os Acts e usa o de MAIOR score como âncora ativa.
-    # As abas têm aparência muito similar entre si (mesma cor laranja);
-    # o template correto da aba ativa sempre pontua mais alto que os outros.
     best_act  = None
     best_m    = None
     best_score = 0.0
@@ -237,20 +218,17 @@ def _click_act_tab(code, attempt=0):
         _go_to_node()
         return
 
-    # Failsafe: evita loop infinito se o Act nunca mudar
     if attempt >= _MAX_TAB_ATTEMPTS:
         warning(f"Map Runner: Act {act} não confirmado após {attempt} tentativas — continuando")
         _go_to_node()
         return
 
-    # Calcula offset desde a aba encontrada até a aba alvo e clica
     ax, ay, _ = best_m
     offset = (target_num - int(best_act)) * _ACT_TAB_SPACING
     tx = ax + offset
     ox, oy = random_click_offset()
     click_mouse_with_coordinates(tx + ox, ay + oy)
     info(f"Map Runner: clicou Act {act} em ({tx},{ay}) via offset de Act {best_act} score={best_score:.3f}")
-    # Aguarda UI atualizar e re-verifica se o Act correto ficou ativo antes de buscar o mapa
     gv.root.after(random_delay_ms(cfg["map_runner"]["nav_click_delay"]),
                   lambda: _click_act_tab(code, attempt + 1))
 
@@ -262,7 +240,6 @@ def _find_map_node(code, scroll_attempts):
     label = map_label(code)
     asset_path = template_for(code)
 
-    # Build a StringVar-like proxy so template_path_for() works with scaled variants
     from tkinter import StringVar as _SV
     _proxy = _SV(value=Path(asset_path).name)
 
@@ -284,7 +261,8 @@ def _find_map_node(code, scroll_attempts):
         ox, oy = random_click_offset()
         click_mouse_with_coordinates(cx + ox, cy + oy)
         info(f"Map Runner: nó '{label}' clicado em ({cx},{cy}) score={score:.3f}")
-        gv.root.after(random_delay_ms(cfg["map_runner"]["nav_click_delay"]), _start_stash_phase)
+        # Após clicar no mapa, inicia a caça ao baú azul
+        gv.root.after(random_delay_ms(cfg["map_runner"]["nav_click_delay"]), _start_chest_hunt)
         return
 
     if scroll_attempts >= _MAX_SCROLL_ATTEMPTS:
@@ -294,7 +272,6 @@ def _find_map_node(code, scroll_attempts):
         _advance_to_next_map()
         return
 
-    # Scroll na direção correta e tenta novamente
     rx = cfg["search_region"]["x"].get() + cfg["search_region"]["width"].get() // 2
     ry = cfg["search_region"]["y"].get() + cfg["search_region"]["height"].get() // 2
     delta = _scroll_delta_for(code)
@@ -308,9 +285,10 @@ def _find_map_node(code, scroll_attempts):
     )
 
 
-# ── STASH ─────────────────────────────────────────────────────────────────────
+# ── BOSS CHEST HUNT ───────────────────────────────────────────────────────────
 
-def _start_stash_phase():
+def _start_chest_hunt():
+    """Após navegar para o mapa, aguarda o ícone do baú azul aparecer."""
     if not gv.continue_map_runner:
         return
 
@@ -318,19 +296,119 @@ def _start_stash_phase():
     current_idx = gv.mr_current_map_index % len(maps)
     label = map_label(maps[current_idx])
 
-    duration_s = random_timeout(cfg["map_runner"]["time_per_map"])
-    gv.mr_stash_phase_deadline = time.monotonic() + duration_s
+    gv.mr_status_message = f"Procurando baú azul em {label}..."
+    _update_mr_status()
+    _hunt_for_boss_chest()
 
-    info(f"Map Runner: coletando em '{label}' por {duration_s:.1f}s")
-    gv.mr_status_message = f"Coletando em {label} ({duration_s:.0f}s)..."
+
+def _hunt_for_boss_chest():
+    """Varre a região de busca pelo ícone de baú azul (boss chest). Clica quando encontra."""
+    if not gv.continue_map_runner:
+        return
+
+    region = _search_region()
+    threshold = cfg["matching"]["threshold"].get()
+    boss_path = _boss_chest_template_path()
+
+    if boss_path is None:
+        warning("Map Runner: template de baú azul não configurado, avançando")
+        _record_and_advance()
+        return
+
+    match = find_template(region, boss_path, threshold)
+    if match is None:
+        debug("Map Runner: baú azul não encontrado, aguardando...")
+        gv.root.after(random_delay_ms(cfg["timeouts"]["loop"]), _hunt_for_boss_chest)
+        return
+
+    cx, cy, score = match
+    info(f"Map Runner: baú azul encontrado em ({cx},{cy}) score={score:.3f}")
+
+    # Micro-pausa humana antes de clicar (30% de chance)
+    delay_ms = random_delay_ms(cfg["timeouts"]["after_click"])
+    if random.random() < 0.30:
+        delay_ms += random.randint(150, 500)
+
+    gv.root.after(delay_ms, lambda: _click_boss_chest_found(cx, cy))
+
+
+def _click_boss_chest_found(cx, cy):
+    """Clica com botão direito no baú azul e decide se faz stash."""
+    if not gv.continue_map_runner:
+        return
+
+    ox, oy = random_click_offset()
+    right_click_mouse_with_coordinates(cx + ox, cy + oy)
+
+    maps = _active_map_codes()
+    current_idx = gv.mr_current_map_index % len(maps)
+    label = map_label(maps[current_idx])
+    gv.mr_status_message = f"Baú azul aberto em {label}!"
+    _update_mr_status()
+
+    # Incrementa contador de baús azuis
+    gv.session_boss_chest_count += 1
+    _update_chest_counter_labels()
+
+    do_stash = cfg["map_runner"]["do_stash_after_chest"].get()
+    delay_ms = random_delay_ms(cfg["timeouts"]["after_click"])
+
+    if do_stash:
+        info("Map Runner: fazendo stash após baú azul")
+        gv.root.after(delay_ms, _start_stash_phase)
+    else:
+        info("Map Runner: pulando stash, indo para próximo mapa")
+        gv.root.after(delay_ms, _record_and_advance)
+
+
+def _boss_chest_template_path():
+    """Retorna o path absoluto do template boss_chest_icon, ou None."""
+    try:
+        from utils.config import chest_check_entries
+        for entry in chest_check_entries():
+            if entry["name"] == "boss_chest":
+                return entry["template"]
+    except Exception:
+        pass
+    return None
+
+
+def _update_chest_counter_labels():
+    """Atualiza os labels de contador de baús na GUI."""
+    total = gv.session_chest_count + gv.session_boss_chest_count
+    if gv.lbl_chest_count is not None:
+        gv.lbl_chest_count.configure(text=str(gv.session_chest_count))
+    if gv.lbl_boss_chest_count is not None:
+        gv.lbl_boss_chest_count.configure(text=str(gv.session_boss_chest_count))
+    if gv.lbl_total_count is not None:
+        gv.lbl_total_count.configure(text=str(total))
+
+
+# ── STASH (após baú azul) ─────────────────────────────────────────────────────
+
+def _start_stash_phase():
+    """Roda um ciclo de stash (auto_fill → stash_all → fechar) após o baú azul."""
+    if not gv.continue_map_runner:
+        return
+
+    maps = _active_map_codes()
+    current_idx = gv.mr_current_map_index % len(maps)
+    label = map_label(maps[current_idx])
+
+    gv.mr_stash_phase_deadline = time.monotonic() + _STASH_AFTER_CHEST_MS / 1000.0
+
+    info(f"Map Runner: stash após baú em '{label}' (até {_STASH_AFTER_CHEST_MS // 1000}s)")
+    gv.mr_status_message = f"Stash em {label}..."
     _update_mr_status()
 
     gv.continue_stash = True
     reset_stash_state()
+    # Pula open_chest (já clicamos) — começa do auto_fill (índice 1)
+    gv.current_step_index = 1
     stash_loop()
     start_periodic_stash_sort()
 
-    gv.root.after(int(duration_s * 1000), _check_stash_phase_done)
+    gv.root.after(_STASH_AFTER_CHEST_MS, _check_stash_phase_done)
 
 
 def _check_stash_phase_done():
@@ -345,7 +423,7 @@ def _check_stash_phase_done():
         gv.root.after(max(500, remaining_ms), _check_stash_phase_done)
 
 
-# ── RECORD ────────────────────────────────────────────────────────────────────
+# ── RECORD / ADVANCE ──────────────────────────────────────────────────────────
 
 def _record_and_advance():
     gv.continue_stash = False

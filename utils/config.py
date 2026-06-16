@@ -133,6 +133,19 @@ def _normalize_config(config):
         mr.pop("nav_next_template", None)
         mr.pop("nav_prev_template", None)
 
+        # Per-map difficulty (new feature — migrate from global difficulty if missing)
+        if "map_difficulties" not in mr:
+            global_diff = mr.get("difficulty", "normal")
+            mr["map_difficulties"] = {code: global_diff for code in ALL_MAP_CODES}
+        else:
+            global_diff = mr.get("difficulty", "normal")
+            for code in ALL_MAP_CODES:
+                mr["map_difficulties"].setdefault(code, global_diff)
+
+        # Auto fill flag after boss chest
+        if "do_stash_after_chest" not in mr:
+            mr["do_stash_after_chest"] = True
+
     return config
 
 
@@ -250,6 +263,11 @@ dict = {
             code: BooleanVar(value=(code in config["map_runner"].get("selected_maps", [])))
             for code in ALL_MAP_CODES
         },
+        "map_difficulties": {
+            code: StringVar(value=str(config["map_runner"]["map_difficulties"].get(code, "normal")))
+            for code in ALL_MAP_CODES
+        },
+        "do_stash_after_chest": BooleanVar(value=bool(config["map_runner"].get("do_stash_after_chest", True))),
         "nav_templates": {
             key: StringVar(value=val)
             for key, val in config["map_runner"]["nav_templates"].items()
@@ -400,6 +418,11 @@ def save_data():
                 for code, var in dict["map_runner"]["selected_maps"].items()
                 if var.get()
             ],
+            "map_difficulties": {
+                code: var.get()
+                for code, var in dict["map_runner"]["map_difficulties"].items()
+            },
+            "do_stash_after_chest": dict["map_runner"]["do_stash_after_chest"].get(),
             "nav_templates": {
                 key: var.get()
                 for key, var in dict["map_runner"]["nav_templates"].items()
