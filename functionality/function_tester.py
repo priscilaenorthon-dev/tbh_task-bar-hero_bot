@@ -32,6 +32,8 @@ def run_diagnostics() -> list[Result]:
         _log_summary(results)
         return results
 
+    results.extend(_check_game_screens(screenshot_cv, region, threshold))
+
     for label, template_path in _configured_templates():
         results.append(
             _check_template_match(label, screenshot_cv, region, template_path, threshold)
@@ -145,6 +147,60 @@ def _check_stash_steps() -> Result:
         return ("Etapas de stash", "FAIL", "Nenhuma etapa configurada em config.yml")
     names = ", ".join(step["name"] for step in steps)
     return ("Etapas de stash", "PASS", names)
+
+
+def _step_template_path(step_name: str) -> str | None:
+    for step in dict["steps"]:
+        if step["name"] == step_name and "template" in step:
+            try:
+                return template_path_for(step["template"])
+            except Exception:
+                return None
+    return None
+
+
+def _combine_template_path() -> str | None:
+    try:
+        return template_path_for(dict["combine_flow"]["template"])
+    except Exception:
+        return None
+
+
+def _check_game_screens(screenshot_cv, region, threshold) -> list[Result]:
+    """Verifica se as 3 telas necessárias para o stash estão abertas."""
+    checks = [
+        (
+            "Tela: Inventário do personagem",
+            _step_template_path("auto_fill"),
+            "Abra o inventário do personagem no jogo",
+        ),
+        (
+            "Tela: Depósito",
+            _step_template_path("stash_all"),
+            "Abra a tela de depósito no jogo",
+        ),
+        (
+            "Tela: Refinamento",
+            _combine_template_path(),
+            "Abra a tela de refinamento no jogo",
+        ),
+    ]
+    results: list[Result] = []
+    for label, tpl_path, hint in checks:
+        if tpl_path is None:
+            results.append((label, "FAIL", f"Template não configurado — {hint}"))
+            continue
+        probe = probe_template(screenshot_cv, region, tpl_path, threshold)
+        if probe["error"]:
+            results.append((label, "FAIL", probe["error"]))
+        elif probe["found"]:
+            cx, cy = probe["center"]
+            results.append((label, "PASS", f"Visível em ({cx}, {cy}) — score {probe['score']:.3f}"))
+        else:
+            results.append(
+                (label, "WARN", f"Não encontrada (score {probe['score']:.3f}) — {hint}")
+            )
+    return results
 
 
 def _log_summary(results: list[Result]):
